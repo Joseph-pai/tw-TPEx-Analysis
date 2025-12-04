@@ -11,8 +11,14 @@ exports.handler = async (event, context) => {
 
     const type = event.queryStringParameters?.type;
     const stockId = event.queryStringParameters?.stock_id;
+    const isTPEx = event.queryStringParameters?.tpex === 'true';
 
-    console.log(`收到請求: type=${type}, stock_id=${stockId}`);
+    console.log(`收到請求: type=${type}, stock_id=${stockId}, isTPEx=${isTPEx}`);
+
+    // 如果是TPEx公司，轉發到TPEx API
+    if (isTPEx) {
+        return await forwardToTPEx(type, stockId, headers);
+    }
 
     // === 結構化財務數據查詢 ===
     if (type === 'financials' && stockId) {
@@ -69,6 +75,55 @@ exports.handler = async (event, context) => {
     }
 };
 
+// 轉發請求到TPEx API
+async function forwardToTPEx(type, stockId, headers) {
+    try {
+        let tpexType;
+        
+        switch(type) {
+            case 'stocks':
+                tpexType = 'stocks';
+                break;
+            case 'financials':
+                tpexType = 'financials';
+                break;
+            case 'monthly':
+                tpexType = 'monthly_revenue';
+                break;
+            default:
+                return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({ error: '不支持的TPEx請求類型' })
+                };
+        }
+
+        // 調用TPEx Function
+        const tpexUrl = `/.netlify/functions/fetch-tpex?type=${tpexType}${stockId ? `&stock_id=${stockId}` : ''}`;
+        const response = await fetch(tpexUrl);
+        
+        if (!response.ok) {
+            throw new Error(`TPEx Function錯誤: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify(data)
+        };
+        
+    } catch (error) {
+        console.error('轉發到TPEx錯誤:', error);
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ error: error.message })
+        };
+    }
+}
+
 // === 核心：結構化財務數據處理 ===
 async function getStructuredFinancials(stockId, headers) {
     try {
@@ -78,11 +133,14 @@ async function getStructuredFinancials(stockId, headers) {
         const [incomeRes, balanceRes, revenueRes, ratioRes] = await Promise.all([
             // 綜合損益表（包含 EPS、淨利）
             Promise.all([
+                fetch('https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_d?stockNo=' + stockId)
+                    .then(r => r.ok ? r.json() : [])
+                    .catch(() => []),
                 fetch('https://openapi.twse.com.tw/v1/opendata/t187ap06_L_ci'),
                 fetch('https://openapi.twse.com.tw/v1/opendata/t187ap06_L_fh'),
                 fetch('https://openapi.twse.com.tw/v1/opendata/t187ap06_L_bd'),
                 fetch('https://openapi.twse.com.tw/v1/opendata/t187ap06_L_ins')
-            ]).then(responses => Promise.all(responses.map(r => r.ok ? r.json() : []))),
+            ]).then(responses => Promise.all(responses.map(r => Array.isArray(r) ? r : []))),
             
             // 資產負債表（包含股東權益）
             Promise.all([
@@ -104,7 +162,9 @@ async function getStructuredFinancials(stockId, headers) {
         ]);
 
         // 2. 合併並過濾該股票的數據
-        const allIncome = incomeRes.flat().filter(row => row['公司代號'] === stockId);
+        const allIncome = incomeRes.flat().filter(row => 
+            row['公司代號'] === stockId || row['Code'] === stockId
+        );
         const allBalance = balanceRes.flat().filter(row => row['公司代號'] === stockId);
         const allRevenue = Array.isArray(revenueRes) ? revenueRes.filter(row => 
             row['公司代號'] === stockId
