@@ -21,6 +21,13 @@
   status = 200
   force = true
 
+# 添加TPEx API路由
+[[redirects]]
+  from = "/tpex-api/*"
+  to = "/.netlify/functions/fetch-tpex"
+  status = 200
+  force = true
+
 # 錯誤頁面配置
 [[redirects]]
   from = "/*"
@@ -48,5 +55,14 @@
   [headers.values]
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Headers = "Content-Type, Authorization"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# 添加TPEx API的特殊頭部設置
+[[headers]]
+  for = "/.netlify/functions/fetch-tpex"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Headers = "Content-Type"
     Access-Control-Allow-Methods = "GET, POST, OPTIONS"
     Cache-Control = "no-cache, no-store, must-revalidate"
