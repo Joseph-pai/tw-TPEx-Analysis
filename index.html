@@ -1,3 +1,5 @@
+[file name]: index.html
+[file content begin]
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -889,7 +891,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sourceEl.textContent = sourceText;
     }
     
-    // 公司類型選擇變化處理
+    // 公司類型選擇變化處理 - 已修復：讓自動檢測模式下的類股選擇可用
     function handleCompanyTypeChange(selectedType) {
         currentCompanyType = selectedType;
         
@@ -899,13 +901,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const stockCategory = document.getElementById('stockCategory');
         const categorySection = document.getElementById('categorySection');
         
-        if (selectedType === 'listed') {
-            // 上市公司：顯示類股選擇
+        if (selectedType === 'listed' || selectedType === 'auto') {
+            // 上市公司或自動檢測：顯示類股選擇
             if (stockCategory) stockCategory.disabled = false;
             if (categorySection) categorySection.style.opacity = '1';
             loadListedStockData();
         } else {
-            // 上櫃/興櫃/自動檢測：隱藏類股選擇
+            // 上櫃/興櫃：隱藏類股選擇
             if (stockCategory) stockCategory.disabled = true;
             if (categorySection) categorySection.style.opacity = '0.5';
             
@@ -932,6 +934,83 @@ document.addEventListener('DOMContentLoaded', () => {
             handleCompanyTypeChange(this.value);
         });
     });
+
+    // ================= FinMind Token 儲存功能 =================
+    
+    // 儲存 Token 按鈕事件
+    document.getElementById('saveToken').addEventListener('click', function() {
+        const tokenInput = document.getElementById('tokenInput');
+        const tokenStatus = document.getElementById('tokenStatus');
+        
+        if (!tokenInput || !tokenStatus) return;
+        
+        const tokenValue = tokenInput.value.trim();
+        
+        if (!tokenValue) {
+            // 清除 Token
+            localStorage.removeItem('joseph_pai_token_2025');
+            TOKEN = '';
+            tokenStatus.innerHTML = '<span style="color:#ffc107">Token 已清除，將使用公開資料</span>';
+            showToast('Token 已清除', 'info');
+            log('FinMind Token 已清除');
+        } else {
+            // 儲存 Token
+            try {
+                localStorage.setItem('joseph_pai_token_2025', tokenValue);
+                TOKEN = tokenValue;
+                
+                // 測試 Token 有效性
+                testFinMindToken(tokenValue, tokenStatus);
+                
+                showToast('Token 已儲存', 'success');
+                log('FinMind Token 已儲存並測試連線中...');
+            } catch (e) {
+                tokenStatus.innerHTML = '<span style="color:#dc3545">儲存失敗，請檢查瀏覽器設定</span>';
+                showToast('Token 儲存失敗', 'error');
+                log(`Token 儲存失敗: ${e.message}`);
+            }
+        }
+    });
+    
+    // 測試 FinMind Token 有效性
+    async function testFinMindToken(token, statusElement) {
+        if (!statusElement) return;
+        
+        statusElement.innerHTML = '<span style="color:#ffc107">測試 FinMind 連線中...</span>';
+        
+        try {
+            const testUrl = `/.netlify/functions/fetch-finmind?dataset=TaiwanStockInfo&token=${token}`;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
+            const response = await fetch(testUrl, { 
+                signal: controller.signal 
+            });
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.status === 200 && data.data) {
+                statusElement.innerHTML = '<span style="color:#28a745">✓ FinMind Token 有效，連線成功</span>';
+                log('FinMind Token 測試成功');
+                
+                // 重新載入股票數據
+                loadStockData();
+            } else {
+                throw new Error('API 返回無效數據');
+            }
+        } catch (error) {
+            statusElement.innerHTML = `<span style="color:#dc3545">✗ Token 測試失敗: ${error.message}</span>`;
+            log(`FinMind Token 測試失敗: ${error.message}`);
+            
+            // 但仍允許儲存 Token，可能只是暫時連線問題
+            statusElement.innerHTML += '<br><small style="color:#ffc107">Token 已儲存，但連線測試失敗，請檢查網路或稍後再試</small>';
+        }
+    }
 
     // ================= AI 分析功能增強 =================
     
@@ -3496,7 +3575,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         label: '大盤', 
                         data: normalizedMarketCloses, 
                         borderColor: '#ff4444',
-                        backgroundColor: 'rgba(255, 68, 68, 0.1)',
+                        backgroundColor = 'rgba(255, 68, 68, 0.1)',
                         tension: 0.3,
                         fill: false,
                         borderWidth: 2,
@@ -3623,3 +3702,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+[file content end]
