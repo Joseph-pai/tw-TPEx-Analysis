@@ -1,14 +1,14 @@
 const fetch = require('node-fetch');
 
 exports.handler = async (event, context) => {
-    // 设置CORS头
+    // 設置CORS頭
     const headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'GET, OPTIONS, POST'
     };
 
-    // 处理预检请求
+    // 處理預檢請求
     if (event.httpMethod === 'OPTIONS') {
         return {
             statusCode: 200,
@@ -17,7 +17,7 @@ exports.handler = async (event, context) => {
         };
     }
 
-    // 获取股票代码
+    // 獲取股票代碼
     const stockCode = event.queryStringParameters?.stock_code || 
                      (event.body ? JSON.parse(event.body).stock_code : null);
 
@@ -25,11 +25,11 @@ exports.handler = async (event, context) => {
         return {
             statusCode: 400,
             headers,
-            body: JSON.stringify({ error: '缺少股票代码参数' })
+            body: JSON.stringify({ error: '缺少股票代碼參數' })
         };
     }
 
-    console.log(`开始检测公司类型: ${stockCode}`);
+    console.log(`開始檢測公司類型: ${stockCode}`);
 
     try {
         let result = {
@@ -40,8 +40,8 @@ exports.handler = async (event, context) => {
             suggestions: []
         };
 
-        // 1. 先尝试查询上市公司（TWSE）
-        console.log(`尝试查询上市公司 (TWSE): ${stockCode}`);
+        // 1. 先嘗試查詢上市公司（TWSE）
+        console.log(`嘗試查詢上市公司 (TWSE): ${stockCode}`);
         const listedResult = await checkListedCompany(stockCode);
         
         if (listedResult.found) {
@@ -58,8 +58,8 @@ exports.handler = async (event, context) => {
             };
         }
 
-        // 2. 尝试查询上櫃公司（TPEx OTC）
-        console.log(`尝试查询上櫃公司 (TPEx OTC): ${stockCode}`);
+        // 2. 嘗試查詢上櫃公司（TPEx OTC）
+        console.log(`嘗試查詢上櫃公司 (TPEx OTC): ${stockCode}`);
         const otcResult = await checkOTCCompany(stockCode);
         
         if (otcResult.found) {
@@ -76,8 +76,8 @@ exports.handler = async (event, context) => {
             };
         }
 
-        // 3. 尝试查询興櫃公司（TPEx Emerging）
-        console.log(`尝试查询興櫃公司 (TPEx Emerging): ${stockCode}`);
+        // 3. 嘗試查詢興櫃公司（TPEx Emerging）
+        console.log(`嘗試查詢興櫃公司 (TPEx Emerging): ${stockCode}`);
         const emergingResult = await checkEmergingCompany(stockCode);
         
         if (emergingResult.found) {
@@ -94,7 +94,7 @@ exports.handler = async (event, context) => {
             };
         }
 
-        // 4. 如果都没找到，提供建议
+        // 4. 如果都沒找到，提供建議
         console.log(`❌ 未找到公司: ${stockCode}`);
         result.suggestions = generateSuggestions(stockCode);
         
@@ -105,12 +105,12 @@ exports.handler = async (event, context) => {
         };
 
     } catch (error) {
-        console.error('检测公司类型错误:', error);
+        console.error('檢測公司類型錯誤:', error);
         return {
             statusCode: 500,
             headers,
             body: JSON.stringify({ 
-                error: '检测公司类型失败',
+                error: '檢測公司類型失敗',
                 details: error.message,
                 stock_code: stockCode 
             })
@@ -118,10 +118,10 @@ exports.handler = async (event, context) => {
     }
 };
 
-// 检查是否为上市公司（TWSE）
+// 檢查是否為上市公司（TWSE）
 async function checkListedCompany(stockCode) {
     try {
-        // 方法1: 通过TWSE API查询
+        // 方法1: 通過TWSE API查詢
         const twseUrl = 'https://openapi.twse.com.tw/v1/opendata/t187ap03_L';
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -132,20 +132,20 @@ async function checkListedCompany(stockCode) {
         clearTimeout(timeoutId);
         
         if (!response.ok) {
-            console.log('TWSE API请求失败，尝试方法2');
-            // 方法2: 通过代码模式判断（上市公司通常是4位数字）
+            console.log('TWSE API請求失敗，嘗試方法2');
+            // 方法2: 通過代碼模式判斷（上市公司通常是4位數字）
             if (/^\d{4}$/.test(stockCode)) {
-                // 检查是否可能是上櫃或興櫃
+                // 檢查是否可能是上櫃或興櫃
                 if (stockCode.startsWith('6')) {
                     return { 
                         found: false,
-                        suggestions: ['此代码以6开头，可能是興櫃公司'] 
+                        suggestions: ['此代碼以6開頭，可能是興櫃公司'] 
                     };
                 }
                 return { 
                     found: true, 
                     stock_name: `上市公司 ${stockCode}`,
-                    suggestions: ['尝试通过FinMind或TWSE获取数据']
+                    suggestions: ['嘗試通過FinMind或TWSE獲取數據']
                 };
             }
             return { found: false };
@@ -171,18 +171,18 @@ async function checkListedCompany(stockCode) {
 
         return { found: false };
     } catch (error) {
-        console.log('检查上市公司失败:', error.message);
+        console.log('檢查上市公司失敗:', error.message);
         return { 
             found: false,
-            suggestions: ['TWSE API查询失败，请手动选择公司类型']
+            suggestions: ['TWSE API查詢失敗，請手動選擇公司類型']
         };
     }
 }
 
-// 检查是否为上櫃公司（TPEx OTC）
+// 檢查是否為上櫃公司（TPEx OTC）
 async function checkOTCCompany(stockCode) {
     try {
-        // 上櫃公司查询 - 使用TPEx公开API
+        // 上櫃公司查詢 - 使用TPEx公開API
         const tpexUrl = 'https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes';
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -193,15 +193,15 @@ async function checkOTCCompany(stockCode) {
         clearTimeout(timeoutId);
         
         if (!response.ok) {
-            console.log('TPEx OTC API请求失败，尝试方法2');
-            // 方法2: 通过代码特征判断
+            console.log('TPEx OTC API請求失敗，嘗試方法2');
+            // 方法2: 通過代碼特徵判斷
             if (/^\d{4}$/.test(stockCode)) {
-                // 上櫃公司通常是4位数字，但不是6开头
+                // 上櫃公司通常是4位數字，但不是6開頭
                 if (!stockCode.startsWith('6')) {
                     return { 
                         found: true, 
                         stock_name: `上櫃公司 ${stockCode}`,
-                        suggestions: ['尝试通过TPEx公开资料获取数据']
+                        suggestions: ['嘗試通過TPEx公開資料獲取數據']
                     };
                 }
             }
@@ -210,7 +210,7 @@ async function checkOTCCompany(stockCode) {
 
         const data = await response.json();
         
-        // TPEx API返回的数据格式可能不同，需要根据实际情况调整
+        // TPEx API返回的數據格式可能不同，需要根據實際情況調整
         if (Array.isArray(data)) {
             const foundStock = data.find(item => {
                 const code = item.Code || item.Symbol || item.證券代號;
@@ -233,18 +233,18 @@ async function checkOTCCompany(stockCode) {
 
         return { found: false };
     } catch (error) {
-        console.log('检查上櫃公司失败:', error.message);
+        console.log('檢查上櫃公司失敗:', error.message);
         return { 
             found: false,
-            suggestions: ['TPEx OTC API查询失败，请手动选择公司类型']
+            suggestions: ['TPEx OTC API查詢失敗，請手動選擇公司類型']
         };
     }
 }
 
-// 检查是否为興櫃公司（TPEx Emerging）
+// 檢查是否為興櫃公司（TPEx Emerging）
 async function checkEmergingCompany(stockCode) {
     try {
-        // 興櫃公司查询 - 使用TPEx公開API
+        // 興櫃公司查詢 - 使用TPEx公開API
         const tpexUrl = 'https://www.tpex.org.tw/openapi/v1/tpex_emerging_quotes';
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -255,13 +255,13 @@ async function checkEmergingCompany(stockCode) {
         clearTimeout(timeoutId);
         
         if (!response.ok) {
-            console.log('TPEx Emerging API请求失败，尝试方法2');
-            // 方法2: 通过代码特征判断（興櫃通常是4位数字，以6开头）
+            console.log('TPEx Emerging API請求失敗，嘗試方法2');
+            // 方法2: 通過代碼特徵判斷（興櫃通常是4位數字，以6開頭）
             if (/^\d{4}$/.test(stockCode) && stockCode.startsWith('6')) {
                 return { 
                     found: true, 
                     stock_name: `興櫃公司 ${stockCode}`,
-                    suggestions: ['尝试通过TPEx公开资料获取数据']
+                    suggestions: ['嘗試通過TPEx公開資料獲取數據']
                 };
             }
             return { found: false };
@@ -291,39 +291,39 @@ async function checkEmergingCompany(stockCode) {
 
         return { found: false };
     } catch (error) {
-        console.log('检查興櫃公司失败:', error.message);
+        console.log('檢查興櫃公司失敗:', error.message);
         return { 
             found: false,
-            suggestions: ['TPEx Emerging API查询失败，请手动选择公司类型']
+            suggestions: ['TPEx Emerging API查詢失敗，請手動選擇公司類型']
         };
     }
 }
 
-// 生成搜索建议
+// 生成搜索建議
 function generateSuggestions(stockCode) {
     const suggestions = [];
     
-    // 根据输入格式提供建议
+    // 根據輸入格式提供建議
     if (/^\d{4}$/.test(stockCode)) {
-        suggestions.push(`尝试搜索股票代码 ${stockCode}`);
+        suggestions.push(`嘗試搜索股票代碼 ${stockCode}`);
         
-        // 上市公司常见代码范围
+        // 上市公司常見代碼範圍
         if (!stockCode.startsWith('6')) {
-            suggestions.push('可能是上市公司或上櫃公司，请手动选择类型');
+            suggestions.push('可能是上市公司或上櫃公司，請手動選擇類型');
         }
         
-        // 興櫃公司常见代码范围
+        // 興櫃公司常見代碼範圍
         if (stockCode.startsWith('6')) {
-            suggestions.push('可能是興櫃公司，请选择"興櫃公司"类型');
+            suggestions.push('可能是興櫃公司，請選擇"興櫃公司"類型');
         }
     } else if (stockCode.length >= 2) {
-        suggestions.push(`尝试搜索公司名称包含 "${stockCode}"`);
-        suggestions.push('请确认股票代码是否正确');
+        suggestions.push(`嘗試搜索公司名稱包含 "${stockCode}"`);
+        suggestions.push('請確認股票代碼是否正確');
     }
     
-    suggestions.push('建议手动选择公司类型：上市公司、上櫃公司或興櫃公司');
-    suggestions.push('尝试使用完整的4位数字股票代码');
-    suggestions.push('检查是否输入了正确的公司名称');
+    suggestions.push('建議手動選擇公司類型：上市公司、上櫃公司或興櫃公司');
+    suggestions.push('嘗試使用完整的4位數字股票代碼');
+    suggestions.push('檢查是否輸入了正確的公司名稱');
     
     return suggestions;
 }
