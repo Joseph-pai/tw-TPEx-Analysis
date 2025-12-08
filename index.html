@@ -120,6 +120,47 @@
             background-color: #ffc107;
             color: #212529;
         }
+        
+        /* 修改的样式：分析時間範圍布局 */
+        .date-range-container {
+            display: flex;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: 10px;
+            justify-content: flex-start;
+        }
+        .date-range-label {
+            flex-shrink: 0;
+            margin-right: 5px;
+        }
+        .date-range-select {
+            flex-shrink: 0;
+        }
+        .date-range-custom {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .analyze-btn-gold {
+            flex-shrink: 0;
+            background-color: #ffc107 !important;
+            border-color: #ffc107 !important;
+            color: #212529 !important;
+            font-weight: bold;
+            padding-left: 20px;
+            padding-right: 20px;
+            min-width: 120px;
+        }
+        .analyze-btn-gold:hover {
+            background-color: #e0a800 !important;
+            border-color: #e0a800 !important;
+        }
+        
+        /* AI 分析助手標題背景改為深綠色 */
+        .ai-analysis-header {
+            background-color: #198754 !important; /* 深綠色 */
+        }
     </style>
 </head>
 <body>
@@ -200,7 +241,7 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label text-white-50"><strong>3. 確認</strong></label>
-                            <button class="btn btn-danger text-white fw-bold w-100" id="confirmSelectionBtn">確認選擇</button>
+                            <button class="btn btn-primary text-white fw-bold w-100" id="confirmSelectionBtn">確認選擇</button>
                         </div>
                     </div>
 
@@ -225,7 +266,7 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label text-white-50"><strong>6. 確認</strong></label>
-                            <button class="btn btn-danger text-white fw-bold w-100" id="confirmListedSelectionBtn">確認選擇</button>
+                            <button class="btn btn-primary text-white fw-bold w-100" id="confirmListedSelectionBtn">確認選擇</button>
                         </div>
                     </div>
 
@@ -240,7 +281,7 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label text-white-50"><strong>8. 選擇</strong></label>
-                            <button class="btn btn-danger text-white fw-bold w-100" id="applyQuickSearch">選擇</button>
+                            <button class="btn btn-primary text-white fw-bold w-100" id="applyQuickSearch">選擇</button>
                         </div>
                     </div>
 
@@ -255,11 +296,11 @@
             <div class="card">
                 <div class="card-body">
                     <form id="analyzeForm">
-                        <div class="row g-2 align-items-center">
-                            <div class="col-md-3">
-                                <label class="form-label text-white-50"><strong>分析時間範圍：</strong></label>
+                        <div class="date-range-container">
+                            <div class="date-range-label">
+                                <label class="form-label text-white-50 mb-0"><strong>分析時間範圍：</strong></label>
                             </div>
-                            <div class="col-md-2">
+                            <div class="date-range-select">
                                 <select id="dateRange" class="form-select">
                                     <option value="30">最近30天</option>
                                     <option value="60" selected>最近60天</option>
@@ -268,21 +309,13 @@
                                     <option value="365">最近一年</option>
                                 </select>
                             </div>
-                            <div class="col-md-1 text-center">
+                            <div class="date-range-custom">
                                 <span class="text-white-50">或自訂：</span>
-                            </div>
-                            <div class="col-md-2">
                                 <input type="date" id="startDate" class="form-control" placeholder="開始日期">
-                            </div>
-                            <div class="col-md-1 text-center">
                                 <span class="text-white-50">到</span>
-                            </div>
-                            <div class="col-md-2">
                                 <input type="date" id="endDate" class="form-control" placeholder="結束日期">
                             </div>
-                            <div class="col-md-1">
-                                <button class="btn btn-danger text-white fw-bold w-100" type="submit">立即分析</button>
-                            </div>
+                            <button class="btn analyze-btn-gold fw-bold" type="submit">立即分析</button>
                         </div>
                     </form>
                     
@@ -299,7 +332,7 @@
     <div class="row justify-content-center mb-4 ai-analysis-section">
         <div class="col-md-12">
             <div class="card text-dark">
-                <div class="card-header bg-danger text-white ai-analysis-toggle" data-bs-toggle="collapse" data-bs-target="#aiAnalysisContent">
+                <div class="card-header ai-analysis-header text-white ai-analysis-toggle" data-bs-toggle="collapse" data-bs-target="#aiAnalysisContent">
                     <strong>🔍 AI 雙重分析助手</strong>
                     <small class="float-end">點擊展開/收合 | 同時分析消息面與風險面</small>
                 </div>
@@ -2866,7 +2899,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 searchInput.value = symbol;
             }
         } else {
-            showToast(`無法識別公司類型: ${symbol}`, 'warning');
+            // 修改：無法判斷公司類型時顯示"上櫃/興櫃公司：股票代碼"
+            showToast(`上櫃/興櫃公司：${symbol}`, 'warning');
+            log(`無法判斷公司類型: ${symbol}，顯示為上櫃/興櫃公司`);
+            
+            // 仍然保存到搜尋歷史，類型設為 unknown
+            saveSearchHistory(symbol, stockName, 'unknown');
         }
     });
     
@@ -2911,7 +2949,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 stockSelect.value = symbol;
             }
         } else {
-            showToast(`無法識別公司類型: ${symbol}`, 'warning');
+            // 修改：無法判斷公司類型時顯示"上櫃/興櫃公司：股票代碼"
+            showToast(`上櫃/興櫃公司：${symbol}`, 'warning');
+            log(`無法判斷公司類型: ${symbol}，顯示為上櫃/興櫃公司`);
+            
+            // 仍然保存到搜尋歷史，類型設為 unknown
+            saveSearchHistory(symbol, stockName, 'unknown');
         }
     });
 
@@ -3004,7 +3047,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 
             } else {
                 log(`未找到公司: ${searchTerm}`);
-                showToast(`未找到公司: ${searchTerm}`, 'warning');
+                // 修改：無法判斷公司類型時顯示"上櫃/興櫃公司：股票代碼"
+                showToast(`上櫃/興櫃公司：${searchTerm}`, 'warning');
+                
+                // 仍然嘗試在清單中添加
+                if (stockSelect) {
+                    const option = document.createElement('option');
+                    option.value = searchTerm;
+                    option.textContent = `${searchTerm} ${searchTerm}`;
+                    option.dataset.type = 'unknown';
+                    stockSelect.appendChild(option);
+                    stockSelect.value = searchTerm;
+                    
+                    // 保存到搜尋歷史
+                    saveSearchHistory(searchTerm, searchTerm, 'unknown');
+                }
             }
         }
     });
@@ -3112,7 +3169,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('confirmSelectionBtn').click();
             }, 500);
         } else {
-            showToast(`無法識別公司類型: ${stockCode}`, 'warning');
+            // 修改：無法判斷公司類型時顯示"上櫃/興櫃公司：股票代碼"
+            showToast(`上櫃/興櫃公司：${stockCode}`, 'warning');
+            log(`無法識別公司類型: ${stockCode}，顯示為上櫃/興櫃公司`);
+            
+            // 仍然保存到搜尋歷史
+            saveSearchHistory(stockCode, stockName, 'unknown');
         }
     });
 
