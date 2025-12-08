@@ -135,7 +135,7 @@
                 <label class="form-label text-white-50 mb-2">FinMind Token（選填）</label>
                 <div class="input-group">
                     <input type="text" id="tokenInput" class="form-control bg-white text-dark" placeholder="貼上 Token 或留空使用公開資料">
-                    <button class="btn btn-warning fw-bold" id="saveToken">儲存</button>
+                    <button class="btn btn-danger fw-bold" id="saveToken">儲存</button>
                 </div>
             </div>
             <small class="text-white-50">免費註冊 → <a href="https://finmindtrade.com/analysis/#/account/register" target="_blank" class="text-warning">FinMind（30秒）</a> ｜ 或直接使用證交所+觀測站公開資料</small>
@@ -147,7 +147,7 @@
     <div class="row justify-content-center mb-4">
         <div class="col-md-12">
             <div class="card">
-                <div class="card-header bg-info text-white">
+                <div class="card-header bg-danger text-white">
                     <strong>📊 股票選擇</strong>
                 </div>
                 <div class="card-body">
@@ -157,16 +157,16 @@
                             <label class="form-label text-white-50"><strong>公司類型（必選）</strong></label>
                             <div class="btn-group w-100" role="group" id="companyTypeGroup">
                                 <input type="radio" class="btn-check" name="companyType" id="companyTypeAuto" value="auto" autocomplete="off" checked>
-                                <label class="btn btn-outline-info" for="companyTypeAuto">自動檢測</label>
+                                <label class="btn btn-danger" for="companyTypeAuto">自動檢測</label>
                                 
                                 <input type="radio" class="btn-check" name="companyType" id="companyTypeListed" value="listed" autocomplete="off">
-                                <label class="btn btn-outline-success" for="companyTypeListed">上市公司</label>
+                                <label class="btn btn-primary" for="companyTypeListed">上市公司</label>
                                 
                                 <input type="radio" class="btn-check" name="companyType" id="companyTypeOTC" value="otc" autocomplete="off">
-                                <label class="btn btn-outline-primary" for="companyTypeOTC">上櫃公司</label>
+                                <label class="btn btn-info" for="companyTypeOTC">上櫃公司</label>
                                 
                                 <input type="radio" class="btn-check" name="companyType" id="companyTypeEmerging" value="emerging" autocomplete="off">
-                                <label class="btn btn-outline-warning" for="companyTypeEmerging">興櫃公司</label>
+                                <label class="btn btn-warning" for="companyTypeEmerging">興櫃公司</label>
                             </div>
                             <div id="detectedTypeDisplay" class="detected-type mt-2"></div>
                         </div>
@@ -179,7 +179,7 @@
                             <label class="form-label text-white-50"><strong>1. 輸入代碼或名稱搜尋</strong></label>
                             <div class="input-group position-relative">
                                 <input type="text" id="searchStockInput" class="form-control" placeholder="輸入代碼或名稱搜尋...">
-                                <button class="btn btn-info text-white fw-bold" id="confirmSearchBtn">確認</button>
+                                <button class="btn btn-danger text-white fw-bold" id="confirmSearchBtn">確認</button>
                                 <!-- 模糊查詢建議下拉選單 -->
                                 <div id="searchSuggestions" class="search-suggestions"></div>
                             </div>
@@ -200,7 +200,7 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label text-white-50"><strong>3. 確認</strong></label>
-                            <button class="btn btn-success text-white fw-bold w-100" id="confirmSelectionBtn">確認選擇</button>
+                            <button class="btn btn-danger text-white fw-bold w-100" id="confirmSelectionBtn">確認選擇</button>
                         </div>
                     </div>
 
@@ -225,7 +225,7 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label text-white-50"><strong>6. 確認</strong></label>
-                            <button class="btn btn-success text-white fw-bold w-100" id="confirmListedSelectionBtn">確認選擇</button>
+                            <button class="btn btn-danger text-white fw-bold w-100" id="confirmListedSelectionBtn">確認選擇</button>
                         </div>
                     </div>
 
@@ -240,7 +240,7 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label text-white-50"><strong>8. 選擇</strong></label>
-                            <button class="btn btn-info text-white fw-bold w-100" id="applyQuickSearch">選擇</button>
+                            <button class="btn btn-danger text-white fw-bold w-100" id="applyQuickSearch">選擇</button>
                         </div>
                     </div>
 
@@ -281,7 +281,7 @@
                                 <input type="date" id="endDate" class="form-control" placeholder="結束日期">
                             </div>
                             <div class="col-md-1">
-                                <button class="btn btn-warning text-dark fw-bold w-100" type="submit">立即分析</button>
+                                <button class="btn btn-danger text-white fw-bold w-100" type="submit">立即分析</button>
                             </div>
                         </div>
                     </form>
@@ -299,7 +299,7 @@
     <div class="row justify-content-center mb-4 ai-analysis-section">
         <div class="col-md-12">
             <div class="card text-dark">
-                <div class="card-header bg-info text-white ai-analysis-toggle" data-bs-toggle="collapse" data-bs-target="#aiAnalysisContent">
+                <div class="card-header bg-danger text-white ai-analysis-toggle" data-bs-toggle="collapse" data-bs-target="#aiAnalysisContent">
                     <strong>🔍 AI 雙重分析助手</strong>
                     <small class="float-end">點擊展開/收合 | 同時分析消息面與風險面</small>
                 </div>
@@ -322,7 +322,7 @@
                             <label class="form-label">API Key</label>
                             <div class="input-group">
                                 <input type="password" id="aiApiKey" class="form-control" placeholder="輸入選擇平台的 API Key">
-                                <button class="btn btn-outline-primary" type="button" id="verifyAiKey">驗證</button>
+                                <button class="btn btn-outline-danger" type="button" id="verifyAiKey">驗證</button>
                             </div>
                             <small class="text-muted" id="apiKeyHint">請輸入有效的API Key</small>
                         </div>
@@ -343,20 +343,20 @@
                     <div class="row mt-3">
                         <div class="col-12">
                             <div class="d-flex gap-2 flex-wrap">
-                                <button class="btn btn-primary" id="aiAnalyzeBtn" disabled>
+                                <button class="btn btn-danger" id="aiAnalyzeBtn" disabled>
                                     <span class="spinner-border spinner-border-sm me-2" id="aiSpinner" style="display: none;"></span>
                                     🤖 開始雙重分析
                                 </button>
                                 <button class="btn btn-outline-secondary" id="clearAiAnalysis">
                                     🗑️ 清除所有分析
                                 </button>
-                                <button class="btn btn-outline-info" id="testConnectionBtn">
+                                <button class="btn btn-outline-danger" id="testConnectionBtn">
                                     🔗 測試連線
                                 </button>
-                                <button class="btn btn-outline-success" id="singleNewsAnalysis" disabled>
+                                <button class="btn btn-outline-danger" id="singleNewsAnalysis" disabled>
                                     📰 僅消息面分析
                                 </button>
-                                <button class="btn btn-outline-warning" id="singleRiskAnalysis" disabled>
+                                <button class="btn btn-outline-danger" id="singleRiskAnalysis" disabled>
                                     ⚠️ 僅風險面分析
                                 </button>
                                 <div id="aiKeyStatus" class="ms-2 align-self-center"></div>
@@ -406,7 +406,7 @@
                                                 <strong>建議: </strong>
                                                 <span id="newsComment" class="text-muted">--</span>
                                             </div>
-                                            <button class="btn btn-sm btn-success w-100 mt-2" id="applyNewsScore">
+                                            <button class="btn btn-sm btn-danger w-100 mt-2" id="applyNewsScore">
                                                 ✅ 應用消息面評分
                                             </button>
                                         </div>
@@ -438,7 +438,7 @@
                                                 <strong>建議: </strong>
                                                 <span id="riskComment" class="text-muted">--</span>
                                             </div>
-                                            <button class="btn btn-sm btn-success w-100 mt-2" id="applyRiskScore">
+                                            <button class="btn btn-sm btn-danger w-100 mt-2" id="applyRiskScore">
                                                 ✅ 應用風險面評分
                                             </button>
                                         </div>
@@ -451,7 +451,7 @@
                         <div class="row mt-3">
                             <div class="col-md-12">
                                 <div class="card">
-                                    <div class="card-header bg-primary text-white">
+                                    <div class="card-header bg-danger text-white">
                                         <strong>📊 綜合分析摘要</strong>
                                     </div>
                                     <div class="card-body">
@@ -469,7 +469,7 @@
                                             </div>
                                         </div>
                                         <div class="text-center mt-3">
-                                            <button class="btn btn-primary" id="applyBothScores">
+                                            <button class="btn btn-danger" id="applyBothScores">
                                                 ✅ 同時應用兩項評分
                                             </button>
                                             <small class="text-muted d-block mt-2">將同時更新消息面(10%)和風險面(10%)的評分</small>
