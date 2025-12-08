@@ -1,5 +1,3 @@
-[file name]: index.html
-[file content begin]
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -126,7 +124,7 @@
                     <div class="row g-3 mb-4" id="categorySection">
                         <div class="col-md-12">
                             <label class="form-label text-white-50"><strong>選擇類股（僅上市公司可用）</strong></label>
-                            <select id="stockCategory" class="form-select" disabled>
+                            <select id="stockCategory" class="form-select">
                                 <option value="all">全部類股</option>
                             </select>
                             <small class="text-white-50">當選擇「上櫃/興櫃公司」時停用</small>
@@ -911,6 +909,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedType === 'listed' || selectedType === 'auto') {
             // 上市公司或自動檢測：顯示類股選擇
             if (stockCategory) {
+                // 移除 disabled 屬性，讓用戶可以選擇類股
                 stockCategory.disabled = false;
                 // 立即加載股票數據
                 loadListedStockData();
@@ -956,6 +955,51 @@ document.addEventListener('DOMContentLoaded', () => {
         radio.addEventListener('change', function() {
             handleCompanyTypeChange(this.value);
         });
+    });
+
+    // ================= 類股選擇處理 =================
+    
+    // 新增：類股選擇變化時，自動設置公司類型為上市公司
+    function handleStockCategoryChange() {
+        const stockCategory = document.getElementById('stockCategory');
+        if (!stockCategory) return;
+        
+        const selectedValue = stockCategory.value;
+        
+        if (selectedValue) {
+            // 當用戶選擇了類股（包括"全部類股"），自動設置為上市公司
+            const listedRadio = document.getElementById('companyTypeListed');
+            if (listedRadio && currentCompanyType !== 'listed') {
+                listedRadio.checked = true;
+                handleCompanyTypeChange('listed');
+                log(`用戶選擇類股 ${selectedValue}，自動設置公司類型為上市公司`);
+                showToast('已自動設置為上市公司模式', 'info');
+            }
+        }
+    }
+    
+    // 設置類股選擇監聽器
+    document.getElementById('stockCategory').addEventListener('change', handleStockCategoryChange);
+    
+    // 新增：點擊類股下拉選單時，如果公司類型不是上市公司，自動設置
+    document.getElementById('stockCategory').addEventListener('focus', function() {
+        if (currentCompanyType !== 'listed') {
+            // 提示用戶將會自動切換到上市公司模式
+            log('用戶點擊類股選擇，準備自動切換到上市公司模式');
+        }
+    });
+    
+    // 新增：類股下拉選單點擊事件
+    document.getElementById('stockCategory').addEventListener('click', function() {
+        if (currentCompanyType !== 'listed') {
+            // 用戶點擊下拉選單時，先設置為上市公司模式
+            const listedRadio = document.getElementById('companyTypeListed');
+            if (listedRadio) {
+                listedRadio.checked = true;
+                handleCompanyTypeChange('listed');
+                log('用戶點擊類股下拉選單，自動設置公司類型為上市公司');
+            }
+        }
     });
 
     // ================= FinMind Token 儲存功能 =================
@@ -3766,4 +3810,3 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-[file content end]
