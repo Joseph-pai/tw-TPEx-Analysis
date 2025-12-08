@@ -66,6 +66,10 @@
         .search-history-item { cursor: pointer; padding: 5px 10px; border-radius: 4px; margin: 2px 0; }
         .search-history-item:hover { background: rgba(255,255,255,0.1); }
         .quick-search-dropdown { max-height: 200px; overflow-y: auto; }
+        
+        /* 新增：加載中樣式 */
+        .loading-spinner { display: inline-block; width: 1rem; height: 1rem; vertical-align: text-bottom; border: 0.15em solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spinner-border .75s linear infinite; }
+        @keyframes spinner-border { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -171,6 +175,9 @@
                                         <select id="stockSelect" class="form-select" required>
                                             <option value="">請選擇或搜尋股票</option>
                                         </select>
+                                        <div id="stockSelectLoading" class="mt-2" style="display: none;">
+                                            <small class="text-warning"><span class="loading-spinner"></span> 載入股票清單中...</small>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -891,7 +898,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sourceEl.textContent = sourceText;
     }
     
-    // 公司類型選擇變化處理 - 已修復：讓自動檢測模式下的類股選擇可用
+    // 公司類型選擇變化處理 - 修復版
     function handleCompanyTypeChange(selectedType) {
         currentCompanyType = selectedType;
         
@@ -903,18 +910,31 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (selectedType === 'listed' || selectedType === 'auto') {
             // 上市公司或自動檢測：顯示類股選擇
-            if (stockCategory) stockCategory.disabled = false;
-            if (categorySection) categorySection.style.opacity = '1';
-            loadListedStockData();
+            if (stockCategory) {
+                stockCategory.disabled = false;
+                // 立即加載股票數據
+                loadListedStockData();
+            }
+            if (categorySection) {
+                categorySection.style.opacity = '1';
+                categorySection.style.pointerEvents = 'auto';
+            }
         } else {
             // 上櫃/興櫃：隱藏類股選擇
-            if (stockCategory) stockCategory.disabled = true;
-            if (categorySection) categorySection.style.opacity = '0.5';
+            if (stockCategory) {
+                stockCategory.disabled = true;
+                stockCategory.value = 'all';
+            }
+            if (categorySection) {
+                categorySection.style.opacity = '0.5';
+                categorySection.style.pointerEvents = 'none';
+            }
             
             // 清除股票選擇
             const stockSelect = document.getElementById('stockSelect');
             if (stockSelect) {
                 stockSelect.innerHTML = '<option value="">請輸入股票代碼</option>';
+                stockSelect.disabled = false;
             }
         }
         
@@ -926,6 +946,9 @@ document.addEventListener('DOMContentLoaded', () => {
             detectedCompanyType = null;
             updateCompanyTypeDisplay('unknown');
         }
+        
+        // 更新股票選擇清單
+        updateStockSelect();
     }
 
     // 設置公司類型選擇監聽器
@@ -999,7 +1022,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 log('FinMind Token 測試成功');
                 
                 // 重新載入股票數據
-                loadStockData();
+                await loadStockData();
+                updateStockSelect();
             } else {
                 throw new Error('API 返回無效數據');
             }
@@ -2453,6 +2477,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // ================= 資料載入邏輯 =================
 
     async function loadStockData() {
+        // 顯示加載狀態
+        const loadingElement = document.getElementById('stockSelectLoading');
+        if (loadingElement) {
+            loadingElement.style.display = 'block';
+        }
+        
         let isLoaded = false;
         
         // 只加載上市公司數據（上櫃/興櫃公司數據通過API獲取）
@@ -2500,6 +2530,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // 隱藏加載狀態
+        if (loadingElement) {
+            loadingElement.style.display = 'none';
+        }
+
         if (isLoaded) {
             industryCategories = new Set(stockData.listed.map(stock => stock.industry_category).filter(Boolean));
             updateCategorySelect();
@@ -2523,14 +2558,32 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!categorySelect) return;
         
         categorySelect.innerHTML = '<option value="all">全部類股</option>';
-        industryCategories.forEach(category => {
-            if (category) {
+        
+        // 確保 industryCategories 已定義
+        if (typeof industryCategories !== 'undefined' && industryCategories.size > 0) {
+            industryCategories.forEach(category => {
+                if (category) {
+                    const option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = category;
+                    categorySelect.appendChild(option);
+                }
+            });
+        } else {
+            // 如果還沒有類別數據，添加默認選項
+            const defaultCategories = [
+                '水泥工業', '食品工業', '塑膠工業', '紡織纖維', '電子工業',
+                '電機機械', '建材營造', '航運業', '金融保險', '其他'
+            ];
+            
+            defaultCategories.forEach(category => {
                 const option = document.createElement('option');
                 option.value = category;
                 option.textContent = category;
                 categorySelect.appendChild(option);
-            }
-        });
+            });
+        }
+        
         updateStockSelect();
     }
 
@@ -2540,6 +2593,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!stockSelect) return;
         
         stockSelect.innerHTML = '<option value="">請選擇或搜尋股票</option>';
+        
+        // 如果還沒有股票數據，顯示提示
+        if (stockData.listed.length === 0) {
+            stockSelect.innerHTML = '<option value="">載入股票資料中...</option>';
+            stockSelect.disabled = true;
+            return;
+        }
+        
+        stockSelect.disabled = false;
         
         let filteredStocks = stockData.listed;
         if (category !== 'all') {
@@ -2599,6 +2661,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const stockSelect = document.getElementById('stockSelect');
         if (!stockSelect) return;
+        
+        // 確保有股票數據
+        if (stockData.listed.length === 0) {
+            stockSelect.innerHTML = '<option value="">載入股票資料中...</option>';
+            return;
+        }
         
         const filteredStocks = stockData.listed.filter(stock => 
             stock.stock_id.includes(searchTerm) || 
@@ -2694,15 +2762,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 類股選擇變化處理
     document.getElementById('stockCategory').addEventListener('change', function() {
-        // 如果當前是自動檢測，則自動切換到上市公司類型
-        if (currentCompanyType === 'auto') {
-            currentCompanyType = 'listed';
-            // 更新UI
-            document.getElementById('companyTypeListed').checked = true;
-            // 觸發公司類型變化處理
-            handleCompanyTypeChange('listed');
-            log('自動檢測模式下選擇類股，已自動切換到上市公司類型');
-        }
+        // 更新股票選擇
         updateStockSelect();
     });
 
@@ -3575,7 +3635,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         label: '大盤', 
                         data: normalizedMarketCloses, 
                         borderColor: '#ff4444',
-                        backgroundColor = 'rgba(255, 68, 68, 0.1)',
+                        backgroundColor: 'rgba(255, 68, 68, 0.1)',
                         tension: 0.3,
                         fill: false,
                         borderWidth: 2,
@@ -3673,8 +3733,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // 加載搜尋歷史
             loadSearchHistory();
             
-            // 加載股票數據
-            loadStockData();
+            // 加載股票數據 - 在初始化時就開始加載
+            loadStockData().then(() => {
+                // 股票數據加載完成後，更新股票選擇
+                updateStockSelect();
+                log('股票數據加載完成');
+            });
             
             log('系統初始化完成');
             
