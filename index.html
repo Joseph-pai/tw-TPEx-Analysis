@@ -171,19 +171,23 @@
             }
         }
         
-        .date-range-custom {
+        /* 修改：解決"或自訂："文字換行問題 */
+        .date-range-custom-wrapper {
             display: flex;
-            flex-direction: column;
-            gap: 8px;
+            align-items: center;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+            gap: 10px;
             width: 100%;
         }
         
         @media (min-width: 768px) {
-            .date-range-custom {
+            .date-range-custom-wrapper {
                 flex-direction: row;
                 align-items: center;
                 gap: 10px;
                 flex: 1 1 auto;
+                width: auto;
             }
         }
         
@@ -199,6 +203,8 @@
                 flex-direction: row;
                 align-items: center;
                 gap: 10px;
+                flex-wrap: nowrap;
+                white-space: nowrap;
             }
         }
         
@@ -207,6 +213,7 @@
             min-width: 120px;
         }
         
+        /* 立即分析按鈕加大20% */
         .analyze-btn-container {
             display: flex;
             justify-content: center;
@@ -227,21 +234,28 @@
             border-color: #ffc107 !important;
             color: #212529 !important;
             font-weight: bold;
-            padding-left: 20px;
-            padding-right: 20px;
-            min-width: 120px;
+            padding: 15px 40px !important; /* 加大20% */
+            font-size: 1.3rem !important; /* 加大字體 */
+            min-width: 180px !important; /* 加大最小寬度 */
             width: 100%;
+            height: auto;
+            line-height: 1.5;
+            border-radius: 8px;
+            transition: all 0.3s ease;
         }
         
         @media (min-width: 768px) {
             .analyze-btn-gold {
                 width: auto;
+                padding: 18px 50px !important; /* 桌機版更大 */
+                font-size: 1.4rem !important;
             }
         }
         
         .analyze-btn-gold:hover {
             background-color: #e0a800 !important;
             border-color: #e0a800 !important;
+            padding: 19px 52px !important; /* 懸停時再稍微放大 */
         }
         
         /* AI 分析助手標題背景改為深綠色 */
@@ -273,6 +287,22 @@
                 min-width: 120px;
                 margin-bottom: 5px;
             }
+            
+            /* 手機版調整日期範圍 */
+            .date-range-custom-wrapper {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .date-range-custom-wrapper .text-white-50 {
+                margin-bottom: 5px;
+                margin-right: 0;
+            }
+            
+            .date-input-group {
+                flex-direction: column;
+                width: 100%;
+            }
         }
         
         /* 移動端調整 */
@@ -294,12 +324,13 @@
                 font-size: 14px;
             }
             
-            .date-range-custom {
+            .date-input-group {
                 flex-direction: column;
             }
             
-            .date-input-group {
-                flex-direction: column;
+            .analyze-btn-gold {
+                padding: 12px 30px !important;
+                font-size: 1.2rem !important;
             }
         }
     </style>
@@ -453,14 +484,14 @@
                                     </select>
                                 </div>
                                 
-                                <div class="date-range-custom">
-                                    <span class="text-white-50 d-none d-md-inline">或自訂：</span>
-                                    <span class="text-white-50 d-inline d-md-none">自訂：</span>
+                                <div class="date-range-custom-wrapper">
+                                    <span class="text-white-50 d-none d-md-inline" style="white-space: nowrap;">或自訂：</span>
+                                    <span class="text-white-50 d-inline d-md-none" style="white-space: nowrap;">自訂：</span>
                                     <div class="date-input-group">
                                         <div class="date-input-wrapper">
                                             <input type="date" id="startDate" class="form-control" placeholder="開始日期">
                                         </div>
-                                        <span class="text-white-50 align-self-center">到</span>
+                                        <span class="text-white-50 align-self-center" style="white-space: nowrap;">到</span>
                                         <div class="date-input-wrapper">
                                             <input type="date" id="endDate" class="form-control" placeholder="結束日期">
                                         </div>
@@ -3544,7 +3575,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return results;
     }
 
-    // 快速搜尋選擇處理
+    // ============== 修復：快速搜尋歷史記錄選擇問題 ==============
     document.getElementById('applyQuickSearch').addEventListener('click', async function() {
         const quickSearchSelect = document.getElementById('quickSearchSelect');
         if (!quickSearchSelect || !quickSearchSelect.value) {
@@ -3557,34 +3588,66 @@ document.addEventListener('DOMContentLoaded', () => {
         const stockText = selectedOption.textContent;
         
         // 從文本中提取股票代碼和名稱
-        const match = stockText.match(/^(\d+)\s+(.+?)(?:\s+\([上中興]市\))?$/);
-        const stockCode = match ? match[1] : selectedValue;
-        const stockName = match ? match[2] : selectedValue;
+        let stockCode, stockName;
+        
+        // 解析不同格式的文本
+        if (stockText.includes('(')) {
+            // 格式: "1234 公司名稱 (上市/上櫃/興櫃)"
+            const match = stockText.match(/^(\d+)\s+(.+?)\s+\((.+?)\)$/);
+            if (match) {
+                stockCode = match[1];
+                stockName = match[2];
+            }
+        } else {
+            // 格式: "1234 公司名稱"
+            const match = stockText.match(/^(\d+)\s+(.+)$/);
+            stockCode = match ? match[1] : selectedValue;
+            stockName = match ? match[2] : selectedValue;
+        }
+        
+        if (!stockCode) {
+            showToast('無法解析股票代碼', 'error');
+            return;
+        }
         
         log(`快速搜尋選擇: ${stockCode} ${stockName}`);
         
-        // 檢測公司類型
-        const detectionResult = await detectCompanyType(stockCode);
+        // 1. 更新搜索輸入框
+        const searchInput = document.getElementById('searchStockInput');
+        if (searchInput) {
+            searchInput.value = stockCode;
+        }
         
-        // 根據檢測結果更新UI
-        if (detectionResult && detectionResult.type !== 'not_found') {
-            // 更新主搜索框和下拉選單
-            const searchInput = document.getElementById('searchStockInput');
-            const stockSelect = document.getElementById('stockSelect');
-            
-            if (searchInput) {
-                searchInput.value = stockCode;
-            }
-            
-            if (stockSelect) {
-                // 嘗試在清單中找到對應的選項
-                for (let i = 0; i < stockSelect.options.length; i++) {
-                    if (stockSelect.options[i].value === stockCode) {
-                        stockSelect.selectedIndex = i;
-                        break;
-                    }
+        // 2. 更新主股票選擇下拉選單
+        const stockSelect = document.getElementById('stockSelect');
+        if (stockSelect) {
+            // 檢查是否已經有這個選項
+            let found = false;
+            for (let i = 0; i < stockSelect.options.length; i++) {
+                if (stockSelect.options[i].value === stockCode) {
+                    stockSelect.selectedIndex = i;
+                    found = true;
+                    break;
                 }
             }
+            
+            // 如果沒有找到，添加新選項
+            if (!found) {
+                const option = document.createElement('option');
+                option.value = stockCode;
+                option.textContent = `${stockCode} ${stockName}`;
+                option.dataset.type = selectedOption.dataset.type || 'listed';
+                stockSelect.appendChild(option);
+                stockSelect.selectedIndex = stockSelect.options.length - 1;
+            }
+        }
+        
+        // 3. 自動檢測公司類型
+        const detectionResult = await detectCompanyType(stockCode);
+        
+        if (detectionResult && detectionResult.type !== 'not_found' && detectionResult.type !== 'unknown') {
+            // 更新公司類型顯示
+            updateCompanyTypeDisplay(detectionResult.type, detectionResult.stock_name || stockName);
             
             // 保存到搜尋歷史
             saveSearchHistory(stockCode, detectionResult.stock_name || stockName, detectionResult.type);
@@ -3594,12 +3657,17 @@ document.addEventListener('DOMContentLoaded', () => {
             
             showToast(`已選擇: ${detectionResult.stock_name || stockName}`, 'success');
             
-            // 自動點擊確認選擇按鈕
+            // 4. 重要：立即更新AI分析按鈕狀態
             setTimeout(() => {
+                // 自動點擊確認選擇按鈕
                 document.getElementById('confirmSelectionBtn').click();
-            }, 500);
+                
+                // 更新AI分析狀態
+                updateAiButtonState();
+            }, 300);
+            
         } else {
-            // 修改：自動判斷為上櫃/興櫃公司
+            // 自動判斷為上櫃/興櫃公司
             let autoType = 'otc';
             let autoName = stockName || stockCode;
             
@@ -3614,13 +3682,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             showToast(`已選擇: ${autoName} (${autoType === 'otc' ? '上櫃' : '興櫃'}公司)`, 'warning');
-            log(`自動判斷為: ${autoType} - ${autoName}`);
             
             // 保存到搜尋歷史
             saveSearchHistory(stockCode, autoName, autoType);
             
             // 自動設置公司類型
             updateCompanyTypeSelection(autoType);
+            
+            // 立即更新AI分析按鈕狀態
+            setTimeout(() => {
+                updateAiButtonState();
+            }, 300);
         }
     });
 
