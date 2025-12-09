@@ -387,7 +387,7 @@
                 <label class="form-label text-white-50 mb-2">FinMind Token（選填）</label>
                 <div class="input-group">
                     <input type="text" id="tokenInput" class="form-control bg-white text-dark" placeholder="貼上 Token 或留空使用公開資料">
-                    <button class="btn btn-danger fw-bold" id="saveToken">儲存</button>
+                    <button class="btn btn-danger fw-bold" id="saveToken">測試/儲存</button>
                 </div>
             </div>
             <small class="text-white-50">免費註冊 → <a href="https://finmindtrade.com/analysis/#/account/register" target="_blank" class="text-warning">FinMind（30秒）</a> ｜ 或直接使用證交所+觀測站公開資料</small>
@@ -3351,6 +3351,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // 更新全局變數
             updateCurrentSelectedStock(symbol, autoName, autoType);
         }
+        
+        // 修改：點擊確認選擇按鈕後，保持股票選擇下拉選單的選中狀態
+        // 不重新載入或清空股票選擇下拉選單
+        log(`保持股票選擇下拉選單選中: ${symbol} ${stockName}`);
     });
     
     // 確認上市公司選擇按鈕
@@ -3367,7 +3371,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (selectedOption && selectedOption.textContent) {
             const text = selectedOption.textContent.trim();
-            const match = text.match(/^\d+\s+(.+)$/);
+            const match = text.match(/^\d+\s+(.+?)(?:\s+\([上中興]市\))?$/);
             stockName = match ? match[1] : text;
         }
         
@@ -3391,7 +3395,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 searchInput.value = symbol;
             }
             
-            // 更新主股票選擇
+            // 修改：更新主股票選擇（但不觸發事件）
             const stockSelect = document.getElementById('stockSelect');
             if (stockSelect) {
                 stockSelect.value = symbol;
@@ -3429,6 +3433,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // 更新全局變數
             updateCurrentSelectedStock(symbol, autoName, autoType);
         }
+        
+        // 修改：點擊確認選擇按鈕後，保持上市公司選擇下拉選單的選中狀態
+        log(`保持上市公司選擇下拉選單選中: ${symbol} ${stockName}`);
     });
 
     // 搜索確認按鈕功能（已增強）
