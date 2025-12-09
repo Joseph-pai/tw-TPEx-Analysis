@@ -302,6 +302,51 @@
             color: white !important;
         }
         
+        /* 新增：用户已选择股票显示框样式 */
+        .selected-stock-display {
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid #28a745;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            display: none;
+        }
+        .selected-stock-display.show {
+            display: block;
+        }
+        .selected-stock-title {
+            color: #ffc107;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        .selected-stock-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .selected-stock-code {
+            background: #28a745;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        .selected-stock-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: white;
+        }
+        .selected-stock-type {
+            background: #007bff;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
         /* 響應式表格調整 */
         @media (max-width: 768px) {
             .table-responsive {
@@ -341,6 +386,13 @@
             .date-input-group {
                 flex-direction: column;
                 width: 100%;
+            }
+            
+            /* 移動端調整已選擇股票顯示 */
+            .selected-stock-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
             }
         }
         
@@ -495,6 +547,17 @@
                             <label class="form-label text-white-50"><strong>8. 選擇</strong></label>
                             <button class="btn btn-primary text-white fw-bold w-100" id="applyQuickSearch">選擇</button>
                         </div>
+                    </div>
+                    
+                    <!-- 新增：用户已选择股票显示框 -->
+                    <div id="selectedStockDisplay" class="selected-stock-display">
+                        <div class="selected-stock-title">✅ 用戶已選擇股票</div>
+                        <div class="selected-stock-info">
+                            <span class="selected-stock-code" id="selectedStockCode">--</span>
+                            <span class="selected-stock-name" id="selectedStockName">尚未選擇股票</span>
+                            <span class="selected-stock-type" id="selectedStockType">--</span>
+                        </div>
+                        <small class="text-white-50 mt-2 d-block">此為您目前選擇的分析標的，可繼續使用其他方式選擇不同股票</small>
                     </div>
 
                 </div>
@@ -734,7 +797,7 @@
                                                 ✅ 同時應用兩項評分
                                             </button>
                                             <small class="text-muted d-block mt-2">將同時更新消息面(10%)和風險面(10%)的評分</small>
-                                        </div>
+                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -844,6 +907,52 @@ document.addEventListener('DOMContentLoaded', () => {
         news: { status: 'idle', result: null, timestamp: null },
         risk: { status: 'idle', result: null, timestamp: null }
     };
+
+    // ================= 新增：更新用戶已選擇股票顯示框 =================
+    function updateSelectedStockDisplay() {
+        const displayElement = document.getElementById('selectedStockDisplay');
+        const codeElement = document.getElementById('selectedStockCode');
+        const nameElement = document.getElementById('selectedStockName');
+        const typeElement = document.getElementById('selectedStockType');
+        
+        if (!displayElement || !codeElement || !nameElement || !typeElement) return;
+        
+        if (currentSelectedStock.code && currentSelectedStock.name) {
+            // 顯示已選擇的股票信息
+            codeElement.textContent = currentSelectedStock.code;
+            nameElement.textContent = currentSelectedStock.name;
+            
+            // 設置公司類型顯示
+            let typeText = '';
+            let typeClass = '';
+            
+            if (currentSelectedStock.type === 'listed') {
+                typeText = '上市公司';
+                typeClass = 'bg-success';
+            } else if (currentSelectedStock.type === 'otc') {
+                typeText = '上櫃公司';
+                typeClass = 'bg-primary';
+            } else if (currentSelectedStock.type === 'emerging') {
+                typeText = '興櫃公司';
+                typeClass = 'bg-warning';
+            } else {
+                typeText = '未知類型';
+                typeClass = 'bg-secondary';
+            }
+            
+            typeElement.textContent = typeText;
+            typeElement.className = `selected-stock-type ${typeClass}`;
+            
+            // 顯示顯示框
+            displayElement.classList.add('show');
+        } else {
+            // 沒有選擇股票時隱藏顯示框
+            displayElement.classList.remove('show');
+            codeElement.textContent = '--';
+            nameElement.textContent = '尚未選擇股票';
+            typeElement.textContent = '--';
+        }
+    }
 
     // ================= 搜尋歷史管理 =================
     
@@ -3277,6 +3386,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         log(`更新當前選擇股票: ${code} ${name} (${type})`);
         
+        // 更新用戶已選擇股票顯示框
+        updateSelectedStockDisplay();
+        
         // 更新AI分析按鈕狀態
         updateAiButtonState();
     }
@@ -3324,6 +3436,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // 更新全局變數中的類型
             updateCurrentSelectedStock(symbol, detectionResult.stock_name || stockName, detectionResult.type);
+            
+            // 重要：不消除第2項的選單內容，保持選中狀態
+            log(`保持股票選擇下拉選單選中: ${symbol} ${stockName}`);
+            
         } else {
             // 修改：無法判斷公司類型時自動歸為上櫃/興櫃公司
             let autoType = 'otc';
@@ -3350,11 +3466,13 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // 更新全局變數
             updateCurrentSelectedStock(symbol, autoName, autoType);
+            
+            // 重要：不消除第2項的選單內容，保持選中狀態
+            log(`保持股票選擇下拉選單選中: ${symbol} ${stockName}`);
         }
         
         // 修改：點擊確認選擇按鈕後，保持股票選擇下拉選單的選中狀態
         // 不重新載入或清空股票選擇下拉選單
-        log(`保持股票選擇下拉選單選中: ${symbol} ${stockName}`);
     });
     
     // 確認上市公司選擇按鈕
@@ -3406,6 +3524,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // 更新全局變數
             updateCurrentSelectedStock(symbol, detectionResult.stock_name || stockName, detectionResult.type);
+            
+            // 重要：不消除第2項的選單內容，保持選中狀態
+            log(`保持上市公司選擇下拉選單選中: ${symbol} ${stockName}`);
+            
         } else {
             // 修改：自動判斷為上櫃/興櫃公司
             let autoType = 'otc';
@@ -3432,10 +3554,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // 更新全局變數
             updateCurrentSelectedStock(symbol, autoName, autoType);
+            
+            // 重要：不消除第2項的選單內容，保持選中狀態
+            log(`保持上市公司選擇下拉選單選中: ${symbol} ${stockName}`);
         }
         
         // 修改：點擊確認選擇按鈕後，保持上市公司選擇下拉選單的選中狀態
-        log(`保持上市公司選擇下拉選單選中: ${symbol} ${stockName}`);
     });
 
     // 搜索確認按鈕功能（已增強）
@@ -3595,6 +3719,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     option.dataset.type = autoType;
                     stockSelect.appendChild(option);
                     stockSelect.value = stockCode;
+                    
+                    // 自動點擊確認選擇按鈕
+                    setTimeout(() => {
+                        document.getElementById('confirmSelectionBtn').click();
+                    }, 500);
                 }
             }
         }
@@ -4878,6 +5007,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // 初始化公司類型顯示
             updateCompanyTypeDisplay('unknown');
             updateDataSourceInfo(null);
+            
+            // 初始化用戶已選擇股票顯示框
+            updateSelectedStockDisplay();
             
             // 加載 AI 配置
             loadAiConfig();
