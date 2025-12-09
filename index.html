@@ -121,30 +121,29 @@
             color: #212529;
         }
         
-        /* 修改的样式：分析時間範圍布局 - 響應式設計 */
+        /* 修改的样式：分析時間範圍布局 */
         .date-range-container {
             display: flex;
-            flex-wrap: wrap;
             align-items: center;
+            flex-wrap: nowrap;
             gap: 10px;
             justify-content: flex-start;
         }
         .date-range-label {
-            flex: 0 0 auto;
+            flex-shrink: 0;
             margin-right: 5px;
         }
         .date-range-select {
-            flex: 0 0 auto;
+            flex-shrink: 0;
         }
         .date-range-custom {
-            flex: 1 1 auto;
+            flex-shrink: 0;
             display: flex;
             align-items: center;
-            flex-wrap: wrap;
             gap: 5px;
         }
         .analyze-btn-gold {
-            flex: 0 0 auto;
+            flex-shrink: 0;
             background-color: #ffc107 !important;
             border-color: #ffc107 !important;
             color: #212529 !important;
@@ -152,115 +151,15 @@
             padding-left: 20px;
             padding-right: 20px;
             min-width: 120px;
-            white-space: nowrap;
         }
         .analyze-btn-gold:hover {
             background-color: #e0a800 !important;
             border-color: #e0a800 !important;
         }
         
-        /* 響應式調整 */
-        @media (max-width: 1200px) {
-            .date-range-container {
-                gap: 8px;
-            }
-            .date-range-custom {
-                gap: 8px;
-            }
-        }
-        
-        @media (max-width: 992px) {
-            .date-range-container {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 10px;
-            }
-            .date-range-label {
-                text-align: center;
-                margin-right: 0;
-                margin-bottom: 5px;
-            }
-            .date-range-select {
-                width: 100%;
-            }
-            .date-range-custom {
-                width: 100%;
-                justify-content: center;
-                margin-top: 5px;
-            }
-            .analyze-btn-gold {
-                width: 100%;
-                margin-top: 10px;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .date-range-custom {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .date-range-custom .form-control {
-                width: 100%;
-            }
-            .date-range-custom span {
-                text-align: center;
-                margin: 5px 0;
-            }
-        }
-        
-        @media (max-width: 576px) {
-            .date-range-select select {
-                font-size: 0.9rem;
-            }
-            .date-range-custom input {
-                font-size: 0.9rem;
-            }
-            .analyze-btn-gold {
-                padding: 10px 15px;
-                font-size: 1rem;
-            }
-        }
-        
         /* AI 分析助手標題背景改為深綠色 */
         .ai-analysis-header {
             background-color: #198754 !important; /* 深綠色 */
-        }
-        
-        /* 整體響應式調整 */
-        @media (max-width: 768px) {
-            .container {
-                padding-left: 10px;
-                padding-right: 10px;
-            }
-            .score-big {
-                font-size: 4rem;
-            }
-            .card-body {
-                padding: 15px;
-            }
-            .table-responsive {
-                font-size: 0.9rem;
-            }
-        }
-        
-        @media (max-width: 576px) {
-            .score-big {
-                font-size: 3rem;
-            }
-            h1 {
-                font-size: 1.5rem;
-            }
-            h2 {
-                font-size: 1.3rem;
-            }
-            .btn-group.w-100 {
-                flex-wrap: wrap;
-            }
-            .btn-group.w-100 .btn {
-                flex: 1 0 auto;
-                margin-bottom: 5px;
-                font-size: 0.85rem;
-            }
         }
     </style>
 </head>
@@ -391,7 +290,7 @@
         </div>
     </div>
 
-    <!-- 分析時間範圍 - 已修改為響應式設計 -->
+    <!-- 分析時間範圍 -->
     <div class="row justify-content-center mb-4">
         <div class="col-md-12">
             <div class="card">
@@ -600,7 +499,6 @@
                                                 <h6>風險面評分</h6>
                                                 <div id="finalRiskScore" class="fs-1 fw-bold text-warning">--</div>
                                                 <div id="finalRiskComment" class="text-muted">--</div>
-                                                <small class="text-muted">(+風險低/-風險高)</small>
                                             </div>
                                         </div>
                                         <div class="text-center mt-3">
@@ -649,8 +547,3717 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// 完整的JavaScript代碼保持不變，因請求要求只修改CSS部分
-// 這裡只包含CSS修改，完整JavaScript代碼在原始文件中
+document.addEventListener('DOMContentLoaded', () => {
+    // ================= 初始化與全域變數 =================
+    let TOKEN = '';
+    try { TOKEN = localStorage.getItem('joseph_pai_token_2025') || ''; } catch(e) {}
+
+    // 財務數據緩存 - 結構化格式
+    let financialCache = {
+        eps: { quarters: {}, year: null },
+        roe: { quarters: {}, year: null },
+        revenueGrowth: { months: {}, quarters: {}, year: null },
+        profitMargin: { quarters: {}, year: null },
+        _metadata: { source: '', stock_id: '', last_updated: '' }
+    };
+
+    // 公司類型與股票數據
+    let currentCompanyType = 'auto'; // auto, listed, otc, emerging
+    let detectedCompanyType = null; // listed, otc, emerging, null
+    let stockData = {
+        listed: [],    // 上市公司數據
+        otc: [],       // 上櫃公司數據
+        emerging: []   // 興櫃公司數據
+    };
+
+    const twseIndustryMap = {
+        "01": "水泥工業", "02": "食品工業", "03": "塑膠工業", "04": "紡織纖維", "05": "電機機械",
+        "06": "電器電纜", "07": "化學生技醫療", "08": "玻璃陶瓷", "09": "造紙工業", "10": "鋼鐵工業",
+        "11": "橡膠工業", "12": "汽車工業", "13": "電子工業", "14": "建材營造", "15": "航運業",
+        "16": "觀光事業", "17": "金融保險", "18": "貿易百貨", "19": "綜合", "20": "其他",
+        "21": "化學工業", "22": "生技醫療業", "23": "油電燃氣業", "24": "半導體業", "25": "電腦及週邊設備業",
+        "26": "光電業", "27": "通信網路業", "28": "電子零組件業", "29": "電子通路業", "30": "資訊服務業",
+        "31": "其他電子業", "32": "文化創意業", "33": "農業科技業", "34": "電子商務業",
+        "35": "綠能環保", "36": "數位雲端", "37": "運動休閒", "38": "居家生活", "91": "存託憑證"
+    };
+
+    // 熱門股票列表
+    const hotStocks = [
+        { code: '2330', name: '台積電', type: 'listed' },
+        { code: '2454', name: '聯發科', type: 'listed' },
+        { code: '2317', name: '鴻海', type: 'listed' },
+        { code: '2412', name: '中華電', type: 'listed' },
+        { code: '2308', name: '台達電', type: 'listed' },
+        { code: '2882', name: '國泰金', type: 'listed' },
+        { code: '2881', name: '富邦金', type: 'listed' },
+        { code: '1303', name: '南亞', type: 'listed' },
+        { code: '1301', name: '台塑', type: 'listed' },
+        { code: '1326', name: '台化', type: 'listed' }
+    ];
+
+    // 搜尋歷史
+    let searchHistory = [];
+
+    // ================= 分析歷史管理 =================
+    let analysisHistory = {
+        news: null,
+        risk: null
+    };
+
+    // 新增：並行分析狀態管理
+    let parallelAnalysisState = {
+        news: { status: 'idle', result: null, timestamp: null },
+        risk: { status: 'idle', result: null, timestamp: null }
+    };
+
+    // ================= 搜尋歷史管理 =================
+    
+    // 載入搜尋歷史
+    function loadSearchHistory() {
+        try {
+            const savedHistory = localStorage.getItem('joseph_pai_search_history');
+            if (savedHistory) {
+                searchHistory = JSON.parse(savedHistory);
+                updateQuickSearchSelect();
+            }
+        } catch (e) {
+            console.error('載入搜尋歷史失敗:', e);
+            searchHistory = [];
+        }
+    }
+    
+    // 儲存搜尋歷史
+    function saveSearchHistory(stockCode, stockName, companyType) {
+        try {
+            // 移除已存在的相同記錄
+            searchHistory = searchHistory.filter(item => item.code !== stockCode);
+            
+            // 添加到開頭
+            searchHistory.unshift({
+                code: stockCode,
+                name: stockName,
+                type: companyType,
+                timestamp: new Date().toISOString()
+            });
+            
+            // 只保留最近20個記錄
+            if (searchHistory.length > 20) {
+                searchHistory = searchHistory.slice(0, 20);
+            }
+            
+            localStorage.setItem('joseph_pai_search_history', JSON.stringify(searchHistory));
+            updateQuickSearchSelect();
+        } catch (e) {
+            console.error('儲存搜尋歷史失敗:', e);
+        }
+    }
+    
+    // 更新快速搜尋下拉選單
+    function updateQuickSearchSelect() {
+        const quickSearchSelect = document.getElementById('quickSearchSelect');
+        if (!quickSearchSelect) return;
+        
+        // 儲存當前選中的值
+        const currentValue = quickSearchSelect.value;
+        
+        // 清空選單
+        quickSearchSelect.innerHTML = '<option value="">選擇熱門股票或搜尋記錄...</option>';
+        
+        // 添加搜尋歷史
+        if (searchHistory.length > 0) {
+            const historyGroup = document.createElement('optgroup');
+            historyGroup.label = '最近搜尋';
+            
+            searchHistory.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.code;
+                option.textContent = `${item.code} ${item.name} (${item.type === 'listed' ? '上市' : item.type === 'otc' ? '上櫃' : '興櫃'})`;
+                option.dataset.type = item.type;
+                historyGroup.appendChild(option);
+            });
+            
+            quickSearchSelect.appendChild(historyGroup);
+        }
+        
+        // 添加熱門股票
+        const hotGroup = document.createElement('optgroup');
+        hotGroup.label = '熱門股票';
+        
+        hotStocks.forEach(stock => {
+            const option = document.createElement('option');
+            option.value = stock.code;
+            option.textContent = `${stock.code} ${stock.name}`;
+            option.dataset.type = stock.type;
+            hotGroup.appendChild(option);
+        });
+        
+        quickSearchSelect.appendChild(hotGroup);
+        
+        // 恢復之前選中的值
+        quickSearchSelect.value = currentValue;
+    }
+
+    // 保存分析歷史
+    function saveAnalysisHistory(analysisType, result, stockName) {
+        if (!result || !stockName) return;
+        
+        analysisHistory[analysisType] = {
+            content: result.content || '',
+            score: result.score || 0,
+            comment: result.comment || '',
+            timestamp: new Date().toISOString(),
+            stockName: stockName,
+            rawContent: result.rawContent || result.content || '',
+            positives: result.positives || [],
+            negatives: result.negatives || []
+        };
+        console.log(`已保存 ${analysisType} 分析歷史`);
+    }
+
+    // 加載保存的分析歷史
+    function loadAnalysisHistory(analysisType) {
+        const history = analysisHistory[analysisType];
+        if (history && history.timestamp) {
+            // 檢查歷史是否過期（超過1小時）
+            const historyTime = new Date(history.timestamp);
+            const now = new Date();
+            const hoursDiff = (now - historyTime) / (1000 * 60 * 60);
+            
+            if (hoursDiff > 1) {
+                console.log(`${analysisType} 分析歷史已過期`);
+                return false;
+            }
+            
+            // 更新對應的分析結果顯示
+            if (analysisType === 'news') {
+                document.getElementById('newsAnalysisContent').textContent = history.content;
+                document.getElementById('newsScoreDisplay').textContent = 
+                    history.score > 0 ? `+${history.score}` : history.score;
+                document.getElementById('newsComment').textContent = history.comment;
+                updateScoreDisplay(history.score, 'news', 'news');
+            } else {
+                document.getElementById('riskAnalysisContent').textContent = history.content;
+                document.getElementById('riskScoreDisplay').textContent = 
+                    history.score > 0 ? `+${history.score}` : history.score;
+                document.getElementById('riskComment').textContent = history.comment;
+                updateScoreDisplay(history.score, 'risk', 'risk');
+            }
+            
+            console.log(`已載入 ${analysisType} 分析歷史`);
+            return true;
+        }
+        return false;
+    }
+
+    // ================= 輸入驗證函數 =================
+    function validateStockCode(code) {
+        if (!code || code.trim() === '') {
+            return { valid: false, message: '請輸入股票代碼' };
+        }
+        
+        // 清理輸入
+        const cleaned = code.trim().toUpperCase();
+        
+        // 檢查是否為有效的股票代碼格式
+        if (/^[0-9]{4}$/.test(cleaned)) {
+            return { valid: true, code: cleaned, type: 'numeric' };
+        }
+        
+        // 檢查是否包含公司名稱
+        if (/^[A-Za-z0-9]/.test(cleaned)) {
+            return { valid: true, code: cleaned, type: 'mixed' };
+        }
+        
+        return { valid: false, message: '股票代碼格式不正確' };
+    }
+
+    function validateDateRange(startDate, endDate) {
+        if (!startDate || !endDate) {
+            return { valid: false, message: '請選擇完整的日期範圍' };
+        }
+        
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const today = new Date();
+        
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return { valid: false, message: '日期格式不正確' };
+        }
+        
+        if (start > end) {
+            return { valid: false, message: '開始日期不能晚於結束日期' };
+        }
+        
+        if (end > today) {
+            return { valid: false, message: '結束日期不能超過今天' };
+        }
+        
+        // 檢查日期範圍是否合理（不超過2年）
+        const daysDiff = (end - start) / (1000 * 60 * 60 * 24);
+        if (daysDiff > 730) {
+            return { valid: false, message: '分析時間範圍不能超過2年' };
+        }
+        
+        return { valid: true };
+    }
+
+    function validateWeightInput(value, fieldName) {
+        const numValue = parseInt(value);
+        if (isNaN(numValue)) {
+            return { valid: false, message: `${fieldName}必須是數字` };
+        }
+        
+        if (numValue < 0 || numValue > 100) {
+            return { valid: false, message: `${fieldName}必須在0-100之間` };
+        }
+        
+        return { valid: true, value: numValue };
+    }
+
+    // ================= UI 更新與驗證顯示 =================
+    function showValidationError(elementId, message) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.classList.add('validation-error');
+            setTimeout(() => {
+                element.classList.remove('validation-error');
+            }, 3000);
+            
+            if (message) {
+                log(`驗證錯誤: ${message}`);
+                showToast(message, 'error');
+            }
+        }
+    }
+
+    function showToast(message, type = 'info') {
+        // 創建簡單的toast通知
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        toast.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <span>${message}</span>
+                <button type="button" class="btn-close" onclick="this.parentElement.parentElement.remove()"></button>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        // 自動移除
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.remove();
+            }
+        }, 5000);
+    }
+
+    // ================= 公司類型處理函數 =================
+    
+    // 更新公司類型顯示
+    function updateCompanyTypeDisplay(type, name = '') {
+        const displayEl = document.getElementById('detectedTypeDisplay');
+        if (!displayEl) return;
+        
+        let displayText = '';
+        let className = '';
+        
+        if (type === 'listed') {
+            displayText = `✅ 上市公司${name ? ': ' + name : ''}`;
+            className = 'type-listed';
+        } else if (type === 'otc') {
+            displayText = `📊 上櫃公司${name ? ': ' + name : ''}`;
+            className = 'type-listed';
+        } else if (type === 'emerging') {
+            displayText = `⚠️ 興櫃公司${name ? ': ' + name : ''}`;
+            className = 'type-emerging';
+        } else if (type === 'unknown') {
+            displayText = '❓ 未知公司類型';
+            className = 'type-unknown';
+        } else if (type === 'detecting') {
+            displayText = '🔄 檢測中...';
+            className = 'type-unknown';
+        }
+        
+        displayEl.innerHTML = `<span class="${className}">${displayText}</span>`;
+    }
+    
+    // 檢測公司類型（改良版）
+    async function detectCompanyType(stockCode) {
+        if (!stockCode || stockCode.trim() === '') {
+            updateCompanyTypeDisplay('unknown');
+            return { type: 'unknown', stock_name: '', suggestions: [] };
+        }
+        
+        updateCompanyTypeDisplay('detecting');
+        
+        try {
+            log(`開始檢測公司類型: ${stockCode}`);
+            
+            // 使用新的檢測API
+            const response = await fetch('/.netlify/functions/check-company-type', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    stock_code: stockCode.trim()
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API錯誤: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.error) {
+                log(`檢測失敗: ${result.error}`);
+                updateCompanyTypeDisplay('unknown');
+                return { type: 'unknown', stock_name: '', suggestions: [] };
+            }
+            
+            log(`檢測結果: ${result.type} - ${result.stock_name}`);
+            
+            // 更新顯示
+            detectedCompanyType = result.type;
+            updateCompanyTypeDisplay(result.type, result.stock_name);
+            
+            // 更新公司類型選擇按鈕
+            updateCompanyTypeSelection(result.type);
+            
+            // 如果找到公司，更新股票選擇
+            if (result.type !== 'not_found') {
+                // 保存到搜尋歷史
+                saveSearchHistory(result.stock_code || stockCode, result.stock_name, result.type);
+                
+                // 更新數據來源顯示
+                updateDataSourceInfo(result.type, result.source);
+            }
+            
+            return result;
+            
+        } catch (error) {
+            log(`檢測公司類型錯誤: ${error.message}`);
+            updateCompanyTypeDisplay('unknown');
+            return { type: 'unknown', stock_name: '', suggestions: [] };
+        }
+    }
+    
+    // 更新公司類型選擇
+    function updateCompanyTypeSelection(companyType) {
+        const radioBtn = document.querySelector(`input[name="companyType"][value="${companyType}"]`);
+        if (radioBtn) {
+            radioBtn.checked = true;
+            handleCompanyTypeChange(companyType);
+        }
+    }
+    
+    // 更新數據來源信息
+    function updateDataSourceInfo(companyType, source) {
+        const sourceEl = document.getElementById('currentDataSource');
+        if (!sourceEl) return;
+        
+        let sourceText = '';
+        
+        if (companyType === 'listed') {
+            if (TOKEN) {
+                sourceText = 'FinMind + TWSE台灣證券交易所';
+            } else {
+                sourceText = 'TWSE台灣證券交易所 (公開資料)';
+            }
+        } else if (companyType === 'otc') {
+            sourceText = 'TPEx證券櫃檯買賣中心 (上櫃)';
+        } else if (companyType === 'emerging') {
+            sourceText = 'TPEx證券櫃檯買賣中心 (興櫃)';
+        } else {
+            sourceText = '準備中...';
+        }
+        
+        if (source) {
+            sourceText += ` (${source})`;
+        }
+        
+        sourceEl.textContent = sourceText;
+    }
+    
+    // 公司類型選擇變化處理 - 修復版
+    function handleCompanyTypeChange(selectedType) {
+        currentCompanyType = selectedType;
+        
+        log(`公司類型變更為: ${selectedType}`);
+        
+        // 更新UI狀態
+        const stockCategory = document.getElementById('stockCategory');
+        const categorySection = document.getElementById('categorySection');
+        const listedStockSelect = document.getElementById('listedStockSelect');
+        
+        if (selectedType === 'listed' || selectedType === 'auto') {
+            // 上市公司或自動檢測：顯示類股選擇
+            if (stockCategory) {
+                stockCategory.disabled = false;
+            }
+            if (categorySection) {
+                categorySection.style.opacity = '1';
+                categorySection.style.pointerEvents = 'auto';
+            }
+            if (listedStockSelect) {
+                listedStockSelect.disabled = false;
+            }
+        } else {
+            // 上櫃/興櫃：隱藏類股選擇
+            if (stockCategory) {
+                stockCategory.disabled = true;
+                stockCategory.value = 'all';
+            }
+            if (categorySection) {
+                categorySection.style.opacity = '0.5';
+                categorySection.style.pointerEvents = 'none';
+            }
+            if (listedStockSelect) {
+                listedStockSelect.disabled = true;
+                listedStockSelect.innerHTML = '<option value="">請先選擇類股</option>';
+            }
+            
+            // 清除股票選擇
+            const stockSelect = document.getElementById('stockSelect');
+            if (stockSelect) {
+                stockSelect.innerHTML = '<option value="">請輸入股票代碼</option>';
+                stockSelect.disabled = false;
+            }
+        }
+        
+        // 更新數據來源顯示
+        updateDataSourceInfo(selectedType === 'auto' ? null : selectedType);
+        
+        // 清除當前的檢測結果
+        if (selectedType !== 'auto') {
+            detectedCompanyType = null;
+            updateCompanyTypeDisplay('unknown');
+        }
+        
+        // 更新股票選擇清單
+        updateStockSelect();
+        updateListedStockSelect();
+    }
+
+    // 設置公司類型選擇監聽器
+    document.querySelectorAll('input[name="companyType"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            handleCompanyTypeChange(this.value);
+        });
+    });
+
+    // ================= 類股選擇處理 =================
+    
+    // 新增：類股選擇變化時，自動設置公司類型為上市公司
+    function handleStockCategoryChange() {
+        const stockCategory = document.getElementById('stockCategory');
+        if (!stockCategory) return;
+        
+        const selectedValue = stockCategory.value;
+        
+        if (selectedValue) {
+            // 當用戶選擇了類股（包括"全部類股"），自動設置為上市公司
+            const listedRadio = document.getElementById('companyTypeListed');
+            if (listedRadio && currentCompanyType !== 'listed') {
+                listedRadio.checked = true;
+                handleCompanyTypeChange('listed');
+                log(`用戶選擇類股 ${selectedValue}，自動設置公司類型為上市公司`);
+                showToast('已自動設置為上市公司模式', 'info');
+            }
+        }
+        
+        // 更新上市公司選擇清單
+        updateListedStockSelect();
+    }
+    
+    // 設置類股選擇監聽器
+    document.getElementById('stockCategory').addEventListener('change', handleStockCategoryChange);
+    
+    // 新增：點擊類股下拉選單時，如果公司類型不是上市公司，自動設置
+    document.getElementById('stockCategory').addEventListener('focus', function() {
+        if (currentCompanyType !== 'listed') {
+            // 提示用戶將會自動切換到上市公司模式
+            log('用戶點擊類股選擇，準備自動切換到上市公司模式');
+        }
+    });
+    
+    // 新增：類股下拉選單點擊事件
+    document.getElementById('stockCategory').addEventListener('click', function() {
+        if (currentCompanyType !== 'listed') {
+            // 用戶點擊下拉選單時，先設置為上市公司模式
+            const listedRadio = document.getElementById('companyTypeListed');
+            if (listedRadio) {
+                listedRadio.checked = true;
+                handleCompanyTypeChange('listed');
+                log('用戶點擊類股下拉選單，自動設置公司類型為上市公司');
+            }
+        }
+    });
+
+    // ================= FinMind Token 儲存功能 =================
+    
+    // 儲存 Token 按鈕事件
+    document.getElementById('saveToken').addEventListener('click', function() {
+        const tokenInput = document.getElementById('tokenInput');
+        const tokenStatus = document.getElementById('tokenStatus');
+        
+        if (!tokenInput || !tokenStatus) return;
+        
+        const tokenValue = tokenInput.value.trim();
+        
+        if (!tokenValue) {
+            // 清除 Token
+            localStorage.removeItem('joseph_pai_token_2025');
+            TOKEN = '';
+            tokenStatus.innerHTML = '<span style="color:#ffc107">Token 已清除，將使用公開資料</span>';
+            showToast('Token 已清除', 'info');
+            log('FinMind Token 已清除');
+        } else {
+            // 儲存 Token
+            try {
+                localStorage.setItem('joseph_pai_token_2025', tokenValue);
+                TOKEN = tokenValue;
+                
+                // 測試 Token 有效性
+                testFinMindToken(tokenValue, tokenStatus);
+                
+                showToast('Token 已儲存', 'success');
+                log('FinMind Token 已儲存並測試連線中...');
+            } catch (e) {
+                tokenStatus.innerHTML = '<span style="color:#dc3545">儲存失敗，請檢查瀏覽器設定</span>';
+                showToast('Token 儲存失敗', 'error');
+                log(`Token 儲存失敗: ${e.message}`);
+            }
+        }
+    });
+    
+    // 測試 FinMind Token 有效性
+    async function testFinMindToken(token, statusElement) {
+        if (!statusElement) return;
+        
+        statusElement.innerHTML = '<span style="color:#ffc107">測試 FinMind 連線中...</span>';
+        
+        try {
+            const testUrl = `/.netlify/functions/fetch-finmind?dataset=TaiwanStockInfo&token=${token}`;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
+            const response = await fetch(testUrl, { 
+                signal: controller.signal 
+            });
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.status === 200 && data.data) {
+                statusElement.innerHTML = '<span style="color:#28a745">✓ FinMind Token 有效，連線成功</span>';
+                log('FinMind Token 測試成功');
+                
+                // 重新載入股票數據
+                await loadStockData();
+                updateStockSelect();
+                updateListedStockSelect();
+            } else {
+                throw new Error('API 返回無效數據');
+            }
+        } catch (error) {
+            statusElement.innerHTML = `<span style="color:#dc3545">✗ Token 測試失敗: ${error.message}</span>`;
+            log(`FinMind Token 測試失敗: ${error.message}`);
+            
+            // 但仍允許儲存 Token，可能只是暫時連線問題
+            statusElement.innerHTML += '<br><small style="color:#ffc107">Token 已儲存，但連線測試失敗，請檢查網路或稍後再試</small>';
+        }
+    }
+
+    // ================= AI 分析功能增強 =================
+    
+    // API 平台鏈接映射
+    const apiPlatformLinks = {
+        'deepseek': 'https://platform.deepseek.com/api_keys',
+        'gpt': 'https://platform.openai.com/api-keys', 
+        'gemini': 'https://aistudio.google.com/app/apikey',
+        'claude': 'https://console.anthropic.com/settings/keys',
+        'grok': 'https://console.x.ai/keys'
+    };
+
+    // API Key 格式提示
+    const apiKeyHints = {
+        'deepseek': 'DeepSeek API Key 以 sk- 開頭',
+        'gpt': 'OpenAI API Key 以 sk- 開頭', 
+        'gemini': 'Google AI Studio API Key',
+        'claude': 'Claude API Key 以 sk-ant- 開頭',
+        'grok': 'Grok API Key'
+    };
+
+    let currentAiApiKey = '';
+    let currentAiPlatform = 'deepseek';
+    let isAiKeyVerified = false;
+    let aiConfig = {};
+
+    // 加載保存的 AI 設置
+    function loadAiConfig() {
+        try {
+            const savedAiConfig = localStorage.getItem('joseph_pai_ai_config');
+            if (savedAiConfig) {
+                aiConfig = JSON.parse(savedAiConfig);
+                
+                // 設置當前平台
+                currentAiPlatform = aiConfig.currentPlatform || 'deepseek';
+                const platformSelect = document.getElementById('aiPlatform');
+                if (platformSelect) {
+                    platformSelect.value = currentAiPlatform;
+                }
+                
+                // 加載當前平台的 API Key
+                const platformApiKey = aiConfig[`${currentAiPlatform}_apiKey`] || '';
+                const apiKeyInput = document.getElementById('aiApiKey');
+                if (apiKeyInput) {
+                    apiKeyInput.value = platformApiKey;
+                }
+                currentAiApiKey = platformApiKey;
+                
+                // 更新驗證狀態
+                isAiKeyVerified = aiConfig[`${currentAiPlatform}_verified`] || false;
+                updateAiButtonState();
+                
+                // 更新提示
+                const hint = apiKeyHints[currentAiPlatform] || '請輸入有效的API Key';
+                const apiKeyHint = document.getElementById('apiKeyHint');
+                if (apiKeyHint) {
+                    apiKeyHint.textContent = hint;
+                }
+                
+                log(`✅ 已載入 ${currentAiPlatform} API 配置`);
+            } else {
+                aiConfig = {};
+            }
+        } catch (e) {
+            console.error('加載AI配置失敗:', e);
+            aiConfig = {};
+        }
+    }
+
+    // 保存 AI 配置
+    function saveAiConfig(platform, apiKey, verified = false) {
+        try {
+            aiConfig.currentPlatform = platform;
+            aiConfig[`${platform}_apiKey`] = apiKey;
+            aiConfig[`${platform}_verified`] = verified;
+            
+            localStorage.setItem('joseph_pai_ai_config', JSON.stringify(aiConfig));
+            log(`✅ 已保存 ${platform} API 配置`);
+        } catch (e) {
+            console.error('保存AI配置失敗:', e);
+            log(`❌ 保存AI配置失敗: ${e.message}`);
+        }
+    }
+
+    // 獲取指定平台的 API Key
+    function getPlatformApiKey(platform) {
+        return aiConfig[`${platform}_apiKey`] || '';
+    }
+
+    // 清除平台驗證狀態
+    function clearPlatformVerification(platform) {
+        if (aiConfig[`${platform}_verified`]) {
+            aiConfig[`${platform}_verified`] = false;
+            localStorage.setItem('joseph_pai_ai_config', JSON.stringify(aiConfig));
+        }
+    }
+
+    // 平台變化時更新提示和 API Key
+    document.getElementById('aiPlatform').addEventListener('change', function() {
+        const newPlatform = this.value;
+        
+        // 清除舊平台的驗證狀態
+        clearPlatformVerification(currentAiPlatform);
+        
+        currentAiPlatform = newPlatform;
+        
+        // 加載新平台的 API Key
+        const platformApiKey = getPlatformApiKey(newPlatform);
+        const apiKeyInput = document.getElementById('aiApiKey');
+        if (apiKeyInput) {
+            apiKeyInput.value = platformApiKey;
+        }
+        currentAiApiKey = platformApiKey;
+        
+        // 更新驗證狀態
+        const hint = apiKeyHints[newPlatform] || '請輸入有效的API Key';
+        const apiKeyHint = document.getElementById('apiKeyHint');
+        if (apiKeyHint) {
+            apiKeyHint.textContent = hint;
+        }
+        
+        // 重置驗證狀態
+        isAiKeyVerified = false;
+        updateAiButtonState();
+        
+        const aiKeyStatus = document.getElementById('aiKeyStatus');
+        if (aiKeyStatus) {
+            aiKeyStatus.innerHTML = '<span class="badge bg-info">已切換平台</span>';
+        }
+        
+        log(`🔄 切換到 ${newPlatform} 平台`);
+    });
+
+    // 獲取API鏈接
+    document.getElementById('getApiLink').addEventListener('click', function(e) {
+        e.preventDefault();
+        const platform = document.getElementById('aiPlatform').value;
+        const url = apiPlatformLinks[platform];
+        if (url) {
+            window.open(url, '_blank');
+        }
+    });
+
+    // API Key 輸入變化
+    document.getElementById('aiApiKey').addEventListener('input', function() {
+        currentAiApiKey = this.value.trim();
+        updateAiButtonState();
+        
+        // 清除驗證狀態
+        if (currentAiApiKey === '') {
+            const aiKeyStatus = document.getElementById('aiKeyStatus');
+            if (aiKeyStatus) {
+                aiKeyStatus.innerHTML = '';
+            }
+            isAiKeyVerified = false;
+        }
+    });
+
+    // 改進的 API Key 驗證
+    document.getElementById('verifyAiKey').addEventListener('click', async function() {
+        if (!currentAiApiKey) {
+            showToast('請輸入 API Key', 'error');
+            return;
+        }
+
+        const verifyBtn = this;
+        const originalText = verifyBtn.innerHTML;
+        verifyBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>驗證中...';
+        verifyBtn.disabled = true;
+
+        try {
+            // 基礎格式驗證
+            let formatValid = true;
+            let formatMessage = '';
+            
+            if ((currentAiPlatform === 'gpt' || currentAiPlatform === 'deepseek') && !currentAiApiKey.startsWith('sk-')) {
+                formatValid = false;
+                formatMessage = 'API Key 格式不正確，應該以 sk- 開頭';
+            }
+            if (currentAiPlatform === 'claude' && !currentAiApiKey.startsWith('sk-ant-')) {
+                formatValid = false;
+                formatMessage = 'Claude API Key 格式不正確，應該以 sk-ant- 開頭';
+            }
+            
+            if (!formatValid) {
+                throw new Error(formatMessage);
+            }
+
+            // 保存配置到本地存儲
+            saveAiConfig(currentAiPlatform, currentAiApiKey, true);
+            
+            isAiKeyVerified = true;
+            updateAiButtonState();
+            
+            const aiKeyStatus = document.getElementById('aiKeyStatus');
+            if (aiKeyStatus) {
+                aiKeyStatus.innerHTML = '<span class="badge bg-success">✓ 格式驗證成功</span>';
+            }
+            
+            log(`✅ ${currentAiPlatform} API Key 格式驗證成功並已保存`);
+            showToast('API Key 格式驗證成功', 'success');
+            
+        } catch (error) {
+            const aiKeyStatus = document.getElementById('aiKeyStatus');
+            if (aiKeyStatus) {
+                aiKeyStatus.innerHTML = '<span class="badge bg-danger">✗ 驗證失敗</span>';
+            }
+            log(`❌ API Key 驗證失敗: ${error.message}`);
+            showToast(`驗證失敗: ${error.message}`, 'error');
+        } finally {
+            verifyBtn.innerHTML = originalText;
+            verifyBtn.disabled = false;
+        }
+    });
+
+    // 測試連線按鈕
+    document.getElementById('testConnectionBtn').addEventListener('click', async function() {
+        if (!currentAiApiKey) {
+            showToast('請先輸入 API Key', 'error');
+            return;
+        }
+
+        const testBtn = this;
+        const originalText = testBtn.innerHTML;
+        testBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>測試中...';
+        testBtn.disabled = true;
+
+        try {
+            log(`測試 ${currentAiPlatform} API 連線...`);
+            
+            const response = await fetch('/.netlify/functions/fetch-ai-analysis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    stockId: '2330',
+                    stockName: '台積電',
+                    apiKey: currentAiApiKey,
+                    analysisType: 'news',
+                    platform: currentAiPlatform
+                })
+            });
+
+            const result = await response.json();
+            
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            // 如果測試成功，保存驗證狀態
+            saveAiConfig(currentAiPlatform, currentAiApiKey, true);
+            isAiKeyVerified = true;
+            updateAiButtonState();
+            
+            const aiKeyStatus = document.getElementById('aiKeyStatus');
+            if (aiKeyStatus) {
+                aiKeyStatus.innerHTML = '<span class="badge bg-success">✓ 連線正常</span>';
+            }
+            log(`✅ ${currentAiPlatform} API 連線測試成功`);
+            showToast(`✅ ${currentAiPlatform} API 連線正常！`, 'success');
+            
+        } catch (error) {
+            const aiKeyStatus = document.getElementById('aiKeyStatus');
+            if (aiKeyStatus) {
+                aiKeyStatus.innerHTML = `<span class="badge bg-danger">✗ 連線失敗</span>`;
+            }
+            log(`❌ API 連線測試失敗: ${error.message}`);
+            showToast(`❌ 連線失敗: ${error.message}`, 'error');
+        } finally {
+            testBtn.innerHTML = originalText;
+            testBtn.disabled = false;
+        }
+    });
+
+    // 更新 AI 按鈕狀態
+    function updateAiButtonState() {
+        const analyzeBtn = document.getElementById('aiAnalyzeBtn');
+        const singleNewsBtn = document.getElementById('singleNewsAnalysis');
+        const singleRiskBtn = document.getElementById('singleRiskAnalysis');
+        
+        if (analyzeBtn) analyzeBtn.disabled = !currentAiApiKey;
+        if (singleNewsBtn) singleNewsBtn.disabled = !currentAiApiKey;
+        if (singleRiskBtn) singleRiskBtn.disabled = !currentAiApiKey;
+        
+        const aiKeyStatus = document.getElementById('aiKeyStatus');
+        if (!aiKeyStatus) return;
+        
+        if (isAiKeyVerified && currentAiApiKey) {
+            aiKeyStatus.innerHTML = '<span class="badge bg-success">✓ 已驗證</span>';
+        } else if (currentAiApiKey) {
+            aiKeyStatus.innerHTML = '<span class="badge bg-warning">待驗證</span>';
+        } else {
+            aiKeyStatus.innerHTML = '<span class="badge bg-secondary">未設定</span>';
+        }
+    }
+
+    // ================= 並行分析進度控制 =================
+    function updateParallelProgress(newsProgress, riskProgress, newsStatus, riskStatus) {
+        const progressBar = document.getElementById('parallelProgress');
+        const newsProgressBar = document.getElementById('newsProgress');
+        const riskProgressBar = document.getElementById('riskProgress');
+        const newsStatusText = document.getElementById('newsStatus');
+        const riskStatusText = document.getElementById('riskStatus');
+        
+        if (!progressBar || !newsProgressBar || !riskProgressBar || !newsStatusText || !riskStatusText) return;
+        
+        // 顯示進度條
+        progressBar.style.display = 'block';
+        
+        // 更新進度
+        newsProgressBar.style.width = `${Math.min(100, Math.max(0, newsProgress))}%`;
+        riskProgressBar.style.width = `${Math.min(100, Math.max(0, riskProgress))}%`;
+        
+        // 更新狀態文字
+        newsStatusText.textContent = newsStatus;
+        riskStatusText.textContent = riskStatus;
+        
+        // 根據狀態更新顏色
+        if (newsStatus.includes('成功') || newsStatus.includes('完成')) {
+            newsProgressBar.className = 'progress-bar bg-success';
+        } else if (newsStatus.includes('失敗')) {
+            newsProgressBar.className = 'progress-bar bg-danger';
+        } else {
+            newsProgressBar.className = 'progress-bar bg-danger';
+        }
+        
+        if (riskStatus.includes('成功') || riskStatus.includes('完成')) {
+            riskProgressBar.className = 'progress-bar bg-success';
+        } else if (riskStatus.includes('失敗')) {
+            riskProgressBar.className = 'progress-bar bg-danger';
+        } else {
+            riskProgressBar.className = 'progress-bar bg-warning';
+        }
+    }
+    
+    function resetParallelProgress() {
+        const progressBar = document.getElementById('parallelProgress');
+        if (progressBar) {
+            progressBar.style.display = 'none';
+        }
+        
+        // 重置狀態
+        parallelAnalysisState = {
+            news: { status: 'idle', result: null, timestamp: null },
+            risk: { status: 'idle', result: null, timestamp: null }
+        };
+    }
+
+    function cleanupParallelAnalysis() {
+        resetParallelProgress();
+        analysisHistory.news = null;
+        analysisHistory.risk = null;
+    }
+
+    // ================= 並行雙重分析功能 =================
+    document.getElementById('aiAnalyzeBtn').addEventListener('click', async function() {
+        await performParallelAnalysis();
+    });
+    
+    // 單獨消息面分析
+    document.getElementById('singleNewsAnalysis').addEventListener('click', async function() {
+        await performSingleAnalysis('news');
+    });
+    
+    // 單獨風險面分析
+    document.getElementById('singleRiskAnalysis').addEventListener('click', async function() {
+        await performSingleAnalysis('risk');
+    });
+    
+    // 執行並行分析
+    async function performParallelAnalysis() {
+        // 獲取股票資訊
+        const stockSelect = document.getElementById('stockSelect');
+        const listedStockSelect = document.getElementById('listedStockSelect');
+        
+        let symbol = '';
+        let stockName = '';
+        
+        // 確定使用哪個方式獲取股票代碼
+        // 首先檢查上市公司選擇清單
+        if (listedStockSelect && listedStockSelect.value) {
+            // 使用上市公司清單選擇
+            symbol = listedStockSelect.value.trim();
+            
+            // 從選項中獲取股票名稱
+            const selectedOption = listedStockSelect.options[listedStockSelect.selectedIndex];
+            if (selectedOption && selectedOption.textContent) {
+                const text = selectedOption.textContent.trim();
+                const match = text.match(/^\d+\s+(.+)$/);
+                stockName = match ? match[1] : text;
+            }
+        } 
+        // 然後檢查主股票選擇清單
+        else if (stockSelect && stockSelect.value) {
+            // 使用主清單選擇
+            symbol = stockSelect.value.trim();
+            
+            // 從選項中獲取股票名稱
+            const selectedOption = stockSelect.options[stockSelect.selectedIndex];
+            if (selectedOption && selectedOption.textContent) {
+                const text = selectedOption.textContent.trim();
+                const match = text.match(/^\d+\s+(.+)$/);
+                stockName = match ? match[1] : text;
+            }
+        }
+        
+        if (!symbol) {
+            showToast('請先選擇股票', 'error');
+            return;
+        }
+
+        if (!currentAiApiKey) {
+            showToast('請先輸入 API Key', 'error');
+            return;
+        }
+
+        const analyzeBtn = document.getElementById('aiAnalyzeBtn');
+        const spinner = document.getElementById('aiSpinner');
+        
+        if (analyzeBtn) analyzeBtn.disabled = true;
+        if (spinner) spinner.style.display = 'inline-block';
+        
+        // 顯示當前使用的平台
+        const aiKeyStatus = document.getElementById('aiKeyStatus');
+        if (aiKeyStatus) {
+            aiKeyStatus.innerHTML = `<span class="badge bg-info">🔄 ${currentAiPlatform} 並行分析中... (約30秒)</span>`;
+        }
+        
+        // 清理之前的分析結果
+        cleanupParallelAnalysis();
+        updateParallelProgress(0, 0, '🔄 準備開始...', '🔄 準備開始...');
+        
+        try {
+            log(`開始並行分析: ${symbol} ${stockName}, 平台: ${currentAiPlatform}`);
+            
+            // 創建兩個分析請求
+            const newsRequest = analyzeSingle(symbol, stockName, currentAiApiKey, 'news', true);
+            const riskRequest = analyzeSingle(symbol, stockName, currentAiApiKey, 'risk', true);
+            
+            // 更新進度
+            updateParallelProgress(30, 30, '🔄 發送消息面請求...', '🔄 發送風險面請求...');
+            
+            // 同時發送兩個請求
+            const [newsResult, riskResult] = await Promise.allSettled([newsRequest, riskRequest]);
+            
+            // 處理消息面結果
+            if (newsResult.status === 'fulfilled') {
+                updateParallelProgress(100, 50, '✅ 消息面分析完成', '🔄 處理風險面結果...');
+                displayAnalysisResult(newsResult.value, 'news', stockName);
+                parallelAnalysisState.news = { 
+                    status: 'completed', 
+                    result: newsResult.value,
+                    timestamp: new Date().toISOString()
+                };
+            } else {
+                updateParallelProgress(100, 50, '❌ 消息面分析失敗', '🔄 處理風險面結果...');
+                log(`❌ 消息面分析失敗: ${newsResult.reason}`);
+                const newsContent = document.getElementById('newsAnalysisContent');
+                if (newsContent) {
+                    newsContent.textContent = `分析失敗: ${newsResult.reason}`;
+                }
+                parallelAnalysisState.news = { 
+                    status: 'failed', 
+                    result: null,
+                    timestamp: new Date().toISOString()
+                };
+            }
+            
+            // 處理風險面結果
+            if (riskResult.status === 'fulfilled') {
+                updateParallelProgress(100, 100, parallelAnalysisState.news.status === 'completed' ? '✅ 消息面分析完成' : '❌ 消息面分析失敗', '✅ 風險面分析完成');
+                displayAnalysisResult(riskResult.value, 'risk', stockName);
+                parallelAnalysisState.risk = { 
+                    status: 'completed', 
+                    result: riskResult.value,
+                    timestamp: new Date().toISOString()
+                };
+            } else {
+                updateParallelProgress(100, 100, parallelAnalysisState.news.status === 'completed' ? '✅ 消息面分析完成' : '❌ 消息面分析失敗', '❌ 風險面分析失敗');
+                log(`❌ 風險面分析失敗: ${riskResult.reason}`);
+                const riskContent = document.getElementById('riskAnalysisContent');
+                if (riskContent) {
+                    riskContent.textContent = `分析失敗: ${riskResult.reason}`;
+                }
+                parallelAnalysisState.risk = { 
+                    status: 'failed', 
+                    result: null,
+                    timestamp: new Date().toISOString()
+                };
+            }
+            
+            // 顯示結果區域
+            const aiAnalysisResult = document.getElementById('aiAnalysisResult');
+            if (aiAnalysisResult) {
+                aiAnalysisResult.style.display = 'block';
+            }
+            
+            // 更新綜合摘要
+            updateSummaryDisplay();
+            
+            if (aiKeyStatus) {
+                aiKeyStatus.innerHTML = `<span class="badge bg-success">✅ ${currentAiPlatform} 並行分析完成</span>`;
+            }
+            
+            log(`✅ ${currentAiPlatform} 並行分析完成`);
+            showToast('並行分析完成', 'success');
+            
+        } catch (error) {
+            if (aiKeyStatus) {
+                aiKeyStatus.innerHTML = `<span class="badge bg-danger">✗ ${currentAiPlatform} 分析失敗</span>`;
+            }
+            log(`❌ 並行分析失敗: ${error.message}`);
+            showToast(`並行分析失敗: ${error.message}`, 'error');
+        } finally {
+            if (analyzeBtn) analyzeBtn.disabled = false;
+            if (spinner) spinner.style.display = 'none';
+        }
+    }
+    
+    // 執行單一分析
+    async function performSingleAnalysis(analysisType) {
+        // 獲取股票資訊
+        const stockSelect = document.getElementById('stockSelect');
+        const listedStockSelect = document.getElementById('listedStockSelect');
+        
+        let symbol = '';
+        let stockName = '';
+        
+        // 確定使用哪個方式獲取股票代碼
+        // 首先檢查上市公司選擇清單
+        if (listedStockSelect && listedStockSelect.value) {
+            // 使用上市公司清單選擇
+            symbol = listedStockSelect.value.trim();
+            
+            // 從選項中獲取股票名稱
+            const selectedOption = listedStockSelect.options[listedStockSelect.selectedIndex];
+            if (selectedOption && selectedOption.textContent) {
+                const text = selectedOption.textContent.trim();
+                const match = text.match(/^\d+\s+(.+)$/);
+                stockName = match ? match[1] : text;
+            }
+        } 
+        // 然後檢查主股票選擇清單
+        else if (stockSelect && stockSelect.value) {
+            // 使用主清單選擇
+            symbol = stockSelect.value.trim();
+            
+            // 從選項中獲取股票名稱
+            const selectedOption = stockSelect.options[stockSelect.selectedIndex];
+            if (selectedOption && selectedOption.textContent) {
+                const text = selectedOption.textContent.trim();
+                const match = text.match(/^\d+\s+(.+)$/);
+                stockName = match ? match[1] : text;
+            }
+        }
+        
+        if (!symbol) {
+            showToast('請先選擇股票', 'error');
+            return;
+        }
+
+        if (!currentAiApiKey) {
+            showToast('請先輸入 API Key', 'error');
+            return;
+        }
+
+        const buttonId = analysisType === 'news' ? 'singleNewsAnalysis' : 'singleRiskAnalysis';
+        const analyzeBtn = document.getElementById(buttonId);
+        
+        if (analyzeBtn) analyzeBtn.disabled = true;
+        
+        const aiKeyStatus = document.getElementById('aiKeyStatus');
+        if (aiKeyStatus) {
+            aiKeyStatus.innerHTML = `<span class="badge bg-info">🔄 ${currentAiPlatform} ${analysisType === 'news' ? '消息面' : '風險面'}分析中...</span>`;
+        }
+        
+        try {
+            log(`開始單一分析 (${analysisType}): ${symbol} ${stockName}, 平台: ${currentAiPlatform}`);
+            
+            const result = await analyzeSingle(symbol, stockName, currentAiApiKey, analysisType, false);
+            
+            displayAnalysisResult(result, analysisType, stockName);
+            
+            // 顯示結果區域
+            const aiAnalysisResult = document.getElementById('aiAnalysisResult');
+            if (aiAnalysisResult) {
+                aiAnalysisResult.style.display = 'block';
+            }
+            
+            // 更新綜合摘要
+            updateSummaryDisplay();
+            
+            if (aiKeyStatus) {
+                aiKeyStatus.innerHTML = `<span class="badge bg-success">✅ ${analysisType === 'news' ? '消息面' : '風險面'}分析完成</span>`;
+            }
+            
+            log(`✅ ${analysisType === 'news' ? '消息面' : '風險面'}分析完成`);
+            showToast(`${analysisType === 'news' ? '消息面' : '風險面'}分析完成`, 'success');
+            
+        } catch (error) {
+            if (aiKeyStatus) {
+                aiKeyStatus.innerHTML = `<span class="badge bg-danger">✗ ${analysisType === 'news' ? '消息面' : '風險面'}分析失敗</span>`;
+            }
+            log(`❌ ${analysisType === 'news' ? '消息面' : '風險面'}分析失敗: ${error.message}`);
+            showToast(`${analysisType === 'news' ? '消息面' : '風險面'}分析失敗: ${error.message}`, 'error');
+        } finally {
+            if (analyzeBtn) analyzeBtn.disabled = false;
+        }
+    }
+    
+    // 單一分析核心函數
+    async function analyzeSingle(stockId, stockName, apiKey, analysisType, isParallel = false) {
+        try {
+            const response = await fetch('/.netlify/functions/fetch-ai-analysis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    stockId: stockId,
+                    stockName: stockName,
+                    apiKey: apiKey,
+                    analysisType: analysisType,
+                    platform: currentAiPlatform,
+                    isParallelRequest: isParallel
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `HTTP ${response.status}`);
+            }
+
+            const result = await response.json();
+            
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            return result;
+            
+        } catch (error) {
+            throw error;
+        }
+    }
+    
+    // 顯示分析結果到對應區塊
+    function displayAnalysisResult(result, analysisType, stockName) {
+        if (!result || !stockName) {
+            log(`無法顯示分析結果: 缺少必要數據`);
+            return;
+        }
+        
+        const prefix = analysisType === 'news' ? 'news' : 'risk';
+        
+        // 更新內容
+        const contentEl = document.getElementById(`${prefix}AnalysisContent`);
+        if (contentEl) {
+            contentEl.textContent = result.content || '分析內容為空';
+        }
+        
+        // 更新評分顯示
+        const score = result.score || 0;
+        updateScoreDisplay(score, analysisType, prefix);
+        
+        // 更新建議
+        const commentEl = document.getElementById(`${prefix}Comment`);
+        if (commentEl) {
+            commentEl.textContent = result.comment || '無建議';
+        }
+        
+        // 更新分數徽章
+        const scoreBadge = document.getElementById(`${prefix}ScoreBadge`);
+        if (scoreBadge) {
+            scoreBadge.textContent = `${score > 0 ? '+' : ''}${score}/10`;
+            scoreBadge.className = `badge ${score > 0 ? 'bg-success' : 'bg-secondary'} text-white`;
+        }
+        
+        // 保存分析歷史
+        saveAnalysisHistory(analysisType, result, stockName);
+        
+        // 更新綜合摘要中的對應部分
+        updateSummaryItem(analysisType, score, result.comment);
+    }
+    
+    // 更新評分顯示顏色
+    function updateScoreDisplay(score, analysisType, prefix) {
+        const scoreDisplay = document.getElementById(`${prefix}ScoreDisplay`);
+        if (!scoreDisplay) return;
+        
+        const scoreValue = score > 0 ? `+${score}` : score;
+        
+        if (analysisType === 'news') {
+            // 消息面：+分紅色，-分黑色
+            scoreDisplay.className = 'fs-4 fw-bold ' + 
+                (score > 0 ? 'text-danger' : 'text-dark');
+        } else {
+            // 風險面：保持原有顏色邏輯
+            scoreDisplay.className = 'fs-4 fw-bold ' + 
+                (score > 0 ? 'text-success' : 
+                 score < 0 ? 'text-danger' : 'text-warning');
+        }
+        
+        scoreDisplay.textContent = scoreValue;
+    }
+    
+    // 更新綜合摘要
+    function updateSummaryDisplay() {
+        const newsScore = parallelAnalysisState.news.result?.score || 0;
+        const riskScore = parallelAnalysisState.risk.result?.score || 0;
+        const newsComment = parallelAnalysisState.news.result?.comment || '未分析';
+        const riskComment = parallelAnalysisState.risk.result?.comment || '未分析';
+        
+        updateSummaryItem('news', newsScore, newsComment);
+        updateSummaryItem('risk', riskScore, riskComment);
+    }
+    
+    function updateSummaryItem(analysisType, score, comment) {
+        const prefix = analysisType === 'news' ? 'finalNews' : 'finalRisk';
+        const scoreElement = document.getElementById(`${prefix}Score`);
+        const commentElement = document.getElementById(`${prefix}Comment`);
+        
+        if (!scoreElement || !commentElement) return;
+        
+        const scoreValue = score !== 0 ? (score > 0 ? `+${score}` : score) : '--';
+        
+        if (analysisType === 'news') {
+            scoreElement.className = 'fs-1 fw-bold ' + 
+                (score > 0 ? 'text-danger' : score < 0 ? 'text-dark' : 'text-muted');
+        } else {
+            scoreElement.className = 'fs-1 fw-bold ' + 
+                (score > 0 ? 'text-success' : score < 0 ? 'text-danger' : 'text-warning');
+        }
+        
+        scoreElement.textContent = scoreValue;
+        commentElement.textContent = comment || '--';
+    }
+
+    // 應用評分到系統
+    document.getElementById('applyNewsScore').addEventListener('click', function() {
+        const scoreText = document.getElementById('newsScoreDisplay').textContent;
+        const score = parseInt(scoreText.replace('+', ''));
+        if (!isNaN(score)) {
+            applyAiScoreToSystem(score, 'news');
+        } else {
+            showToast('無法讀取消息面評分', 'error');
+        }
+    });
+    
+    document.getElementById('applyRiskScore').addEventListener('click', function() {
+        const scoreText = document.getElementById('riskScoreDisplay').textContent;
+        const score = parseInt(scoreText.replace('+', ''));
+        if (!isNaN(score)) {
+            applyAiScoreToSystem(score, 'risk');
+        } else {
+            showToast('無法讀取風險面評分', 'error');
+        }
+    });
+    
+    document.getElementById('applyBothScores').addEventListener('click', function() {
+        const newsScoreText = document.getElementById('newsScoreDisplay').textContent;
+        const riskScoreText = document.getElementById('riskScoreDisplay').textContent;
+        
+        const newsScore = parseInt(newsScoreText.replace('+', ''));
+        const riskScore = parseInt(riskScoreText.replace('+', ''));
+        
+        let appliedCount = 0;
+        
+        if (!isNaN(newsScore)) {
+            applyAiScoreToSystem(newsScore, 'news');
+            appliedCount++;
+        }
+        
+        if (!isNaN(riskScore)) {
+            applyAiScoreToSystem(riskScore, 'risk');
+            appliedCount++;
+        }
+        
+        if (appliedCount > 0) {
+            showToast(`已成功應用 ${appliedCount} 項評分！`, 'success');
+        } else {
+            showToast('無法讀取評分數據', 'error');
+        }
+    });
+    
+    // 應用 AI 評分到評分系統
+    function applyAiScoreToSystem(score, analysisType) {
+        const targetField = analysisType === 'news' ? 'news' : 'risk';
+        const weight = weights[targetField] || 10;
+        
+        // 計算加權分數
+        const weightedScore = Math.round((score / 10) * weight);
+        
+        // 更新對應的評分顯示
+        const scoreElement = document.getElementById(`score_${targetField}`);
+        if (scoreElement) {
+            scoreElement.textContent = weightedScore;
+            scoreElement.className = `badge ${weightedScore >= 0 ? 'badge-pos' : 'badge-neg'} fs-5`;
+        }
+        
+        // 更新說明文字
+        const descElement = scoreElement?.closest('tr')?.querySelector('td:nth-child(4)');
+        if (descElement) {
+            const typeName = analysisType === 'news' ? '消息面' : '風險面';
+            descElement.innerHTML = `<small>AI ${typeName}分析評分: ${score} → 加權: ${weightedScore}</small>`;
+        }
+        
+        // 更新總分
+        updateTotalScore();
+        
+        log(`✅ AI ${analysisType === 'news' ? '消息面' : '風險面'}評分 ${score} 已應用到系統 (加權: ${weightedScore})`);
+        showToast(`AI ${analysisType === 'news' ? '消息面' : '風險面'}評分已成功應用！`, 'success');
+    }
+
+    // 輔助函數：複製到剪貼簿
+    function copyToClipboard(elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        
+        const text = element.textContent;
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('已複製到剪貼簿！', 'success');
+        }).catch(err => {
+            console.error('複製失敗: ', err);
+            showToast('複製失敗', 'error');
+        });
+    }
+
+    // 清除分析結果
+    document.getElementById('clearAiAnalysis').addEventListener('click', function() {
+        // 清除所有顯示內容
+        const aiAnalysisResult = document.getElementById('aiAnalysisResult');
+        if (aiAnalysisResult) {
+            aiAnalysisResult.style.display = 'none';
+        }
+        
+        const elementsToClear = [
+            { id: 'newsAnalysisContent', default: '請先進行分析...' },
+            { id: 'riskAnalysisContent', default: '請先進行分析...' },
+            { id: 'newsScoreDisplay', default: '--' },
+            { id: 'riskScoreDisplay', default: '--' },
+            { id: 'newsComment', default: '--' },
+            { id: 'riskComment', default: '--' },
+            { id: 'newsScoreBadge', default: '--/10' },
+            { id: 'riskScoreBadge', default: '--/10' },
+            { id: 'finalNewsScore', default: '--' },
+            { id: 'finalRiskScore', default: '--' },
+            { id: 'finalNewsComment', default: '--' },
+            { id: 'finalRiskComment', default: '--' }
+        ];
+        
+        elementsToClear.forEach(item => {
+            const el = document.getElementById(item.id);
+            if (el) el.textContent = item.default;
+        });
+        
+        // 清除歷史
+        analysisHistory.news = null;
+        analysisHistory.risk = null;
+        
+        // 重置進度條
+        cleanupParallelAnalysis();
+        
+        log('已清除所有分析結果');
+        showToast('已清除所有分析結果', 'info');
+    });
+
+    // ================= 核心 API 函數 =================
+
+    async function fetchFinmind(dataset, dataId = '', startDate = '', endDate = '', retries = 3) {
+        if (!TOKEN && dataset !== 'TaiwanStockInfo') return null;
+        let url = `/.netlify/functions/fetch-finmind?dataset=${dataset}`;
+        if (dataId) url += `&data_id=${dataId}`;
+        if (startDate) url += `&start_date=${startDate}`;
+        if (endDate) url += `&end_date=${endDate}`;
+        if (TOKEN) url += `&token=${TOKEN}`;
+        
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (!response.ok) {
+                    if (attempt < retries) { 
+                        await new Promise(r => setTimeout(r, 1000 * attempt)); 
+                        continue; 
+                    }
+                    return null;
+                }
+                const data = await response.json();
+                if (data.status === 200 && data.data) return data;
+            } catch (err) { 
+                if (attempt < retries) await new Promise(r => setTimeout(r, 1000 * attempt)); 
+            }
+        }
+        return null;
+    }
+
+    async function fetchYahooWithProxy(symbol, logName) {
+        log(`${logName} 請求中 (透過 Netlify Price Function 代理)...`);
+        try {
+            const response = await fetch(`/.netlify/functions/fetch-price?id=${symbol}`);
+            if (!response.ok) {
+                log(`${logName} 代理失敗: ${response.status}`);
+                return null;
+            }
+            const data = await response.json(); 
+            if (data && data.chart?.result?.[0]) {
+                log(`${logName} 成功！`);
+                return data;
+            }
+            log(`${logName} 失敗: 格式錯誤`);
+            return null;
+        } catch (err) {
+            log(`${logName} 失敗: ${err.message}`);
+            return null;
+        }
+    }
+
+    async function fetchTWSEPrice(stockId) {
+        try {
+            const response = await fetch(`https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY?stockNo=${stockId}`);
+            if (!response.ok) return null;
+            const data = await response.json();
+            return (data && Array.isArray(data) && data.length > 0) ? data : null;
+        } catch (err) { return null; }
+    }
+
+    // ================= 增強版財務數據獲取 =================
+    
+    async function fetchFinancialData(stockId) {
+        log(`開始獲取財務數據: ${stockId}`);
+        
+        // 決定公司類型
+        let companyType;
+        if (currentCompanyType === 'auto') {
+            // 自動檢測：使用檢測到的類型或重新檢測
+            if (detectedCompanyType) {
+                companyType = detectedCompanyType;
+            } else {
+                const detectionResult = await detectCompanyType(stockId);
+                companyType = detectionResult ? detectionResult.type : 'listed'; // 默認上市公司
+            }
+        } else {
+            companyType = currentCompanyType;
+        }
+        
+        log(`確定公司類型: ${companyType}, 股票: ${stockId}`);
+        
+        // 重置財務快取
+        financialCache = {
+            eps: { quarters: {}, year: null },
+            roe: { quarters: {}, year: null },
+            revenueGrowth: { months: {}, quarters: {}, year: null },
+            profitMargin: { quarters: {}, year: null },
+            _metadata: { source: '', stock_id: stockId, last_updated: new Date().toISOString() }
+        };
+        
+        let source = 'Unknown';
+        let success = false;
+        
+        try {
+            if (companyType === 'listed') {
+                // 1. 優先從 FinMind 獲取上市公司數據
+                if (TOKEN) {
+                    log('嘗試從 FinMind 獲取上市公司財務數據...');
+                    const finmindData = await fetchFinmindFinancials(stockId);
+                    if (finmindData) {
+                        source = 'FinMind (上市公司)';
+                        log('✅ FinMind 上市公司財務數據載入成功');
+                        success = true;
+                    }
+                }
+                
+                // 2. 備援：證交所財報
+                if (!success) {
+                    log('FinMind 失敗，嘗試證交所財報...');
+                    const twseData = await fetchTWSEFinancials(stockId);
+                    if (twseData) {
+                        source = 'TWSE (上市公司)';
+                        log('✅ 證交所財務數據載入成功');
+                        success = true;
+                    }
+                }
+                
+                // 3. 最終備援：Yahoo Finance
+                if (!success) {
+                    log('證交所失敗，嘗試 Yahoo Finance...');
+                    const yahooData = await fetchYahooFinanceFinancials(stockId);
+                    if (yahooData) {
+                        source = 'Yahoo Finance (上市公司)';
+                        log('✅ Yahoo Finance 財務數據載入成功');
+                        success = true;
+                    }
+                }
+                
+            } else if (companyType === 'otc' || companyType === 'emerging') {
+                // 上櫃/興櫃公司：使用 TPEx API
+                log(`嘗試從 TPEx 獲取${companyType === 'otc' ? '上櫃' : '興櫃'}公司財務數據...`);
+                const tpexData = await fetchTPExFinancials(stockId, companyType);
+                if (tpexData) {
+                    source = `TPEx (${companyType === 'otc' ? '上櫃' : '興櫃'}公司)`;
+                    log(`✅ TPEx ${companyType === 'otc' ? '上櫃' : '興櫃'}公司財務數據載入成功`);
+                    success = true;
+                }
+                
+                // 上櫃/興櫃公司備援：使用 Yahoo Finance (.TWO)
+                if (!success) {
+                    log(`TPEx 失敗，嘗試 Yahoo Finance (.TWO)...`);
+                    const yahooData = await fetchYahooFinanceFinancials(`${stockId}.TWO`);
+                    if (yahooData) {
+                        source = `Yahoo Finance (${companyType === 'otc' ? '上櫃' : '興櫃'}公司)`;
+                        log(`✅ Yahoo Finance ${companyType === 'otc' ? '上櫃' : '興櫃'}公司財務數據載入成功`);
+                        success = true;
+                    }
+                }
+            }
+            
+            if (!success) {
+                log(`❌ ${companyType === 'listed' ? '上市公司' : companyType === 'otc' ? '上櫃公司' : '興櫃公司'} 所有財務數據來源都失敗`);
+                // 提供降級數據
+                provideFallbackData(stockId, companyType);
+                source = '降級數據 (所有來源失敗)';
+            }
+            
+            // 更新元數據
+            financialCache._metadata.source = source;
+            financialCache._metadata.company_type = companyType;
+            
+            return { 
+                source, 
+                data: financialCache, 
+                companyType: companyType,
+                success: success
+            };
+            
+        } catch (error) {
+            log(`❌ 獲取財務數據時發生錯誤: ${error.message}`);
+            // 提供降級數據
+            provideFallbackData(stockId, companyType);
+            return { 
+                source: '錯誤降級數據', 
+                data: financialCache, 
+                companyType: companyType,
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    // 提供降級數據
+    function provideFallbackData(stockId, companyType) {
+        log(`提供降級數據給 ${stockId} (${companyType})`);
+        
+        // 設置基本的降級數據
+        financialCache = {
+            eps: { 
+                quarters: { 'Q1': 1.5, 'Q2': 1.8, 'Q3': 2.1, 'Q4': 2.5 }, 
+                year: 8.0 
+            },
+            roe: { 
+                quarters: { 'Q1': 8.5, 'Q2': 9.2, 'Q3': 10.1, 'Q4': 11.3 }, 
+                year: 9.8 
+            },
+            revenueGrowth: { 
+                months: {}, 
+                quarters: { 'Q1': 12.5, 'Q2': 15.3, 'Q3': 18.7, 'Q4': 22.1 }, 
+                year: 17.2 
+            },
+            profitMargin: { 
+                quarters: { 'Q1': 25.3, 'Q2': 26.8, 'Q3': 28.1, 'Q4': 29.5 }, 
+                year: 27.4 
+            },
+            _metadata: {
+                source: 'fallback',
+                stock_id: stockId,
+                company_type: companyType,
+                last_updated: new Date().toISOString(),
+                note: '所有數據來源失敗，使用預設數據'
+            }
+        };
+    }
+
+    // 上市公司財務數據獲取（保持原有邏輯）
+    async function fetchFinmindFinancials(stockId) {
+        try {
+            log(`🔍 FinMind 數據獲取開始: ${stockId}`);
+            
+            const [financialStatement, balanceSheet, revenueData] = await Promise.all([
+                fetchFinmind('TaiwanStockFinancialStatements', stockId, '2020-01-01'),
+                fetchFinmind('TaiwanStockBalanceSheet', stockId, '2020-01-01'),
+                fetchFinmind('TaiwanStockMonthRevenue', stockId, '2020-01-01')
+            ]);
+
+            log(`📊 FinMind 數據檢查:`);
+            log(`- 財務報表筆數: ${financialStatement?.data?.length || 0}`);
+            log(`- 資產負債表筆數: ${balanceSheet?.data?.length || 0}`);
+            log(`- 月營收筆數: ${revenueData?.data?.length || 0}`);
+
+            if (!financialStatement && !balanceSheet && !revenueData) {
+                log('❌ FinMind 所有數據集都為空');
+                return null;
+            }
+
+            // 處理財務報表數據
+            if (financialStatement?.data) {
+                log(`🔄 重組財務報表數據...`);
+                
+                const byDate = {};
+                financialStatement.data.forEach(item => {
+                    if (!byDate[item.date]) byDate[item.date] = {};
+                    byDate[item.date][item.type] = item.value;
+                    byDate[item.date]['_origin'] = byDate[item.date]['_origin'] || {};
+                    byDate[item.date]['_origin'][item.type] = item.origin_name;
+                });
+
+                const byQuarter = {};
+                let latestYearEPS = 0;
+                let latestYearDate = '';
+                
+                const dates = Object.keys(byDate).sort().reverse();
+                
+                dates.forEach(date => {
+                    const data = byDate[date];
+                    const dateObj = new Date(date);
+                    const year = dateObj.getFullYear();
+                    const month = dateObj.getMonth() + 1;
+                    const quarter = Math.floor((month + 2) / 3);
+                    const quarterKey = `${year}Q${quarter}`;
+                    
+                    // 處理 EPS 數據
+                    if (data.EPS !== undefined) {
+                        const eps = parseFloat(data.EPS);
+                        if (!isNaN(eps)) {
+                            if (!byQuarter[quarterKey]) byQuarter[quarterKey] = {};
+                            byQuarter[quarterKey].eps = eps;
+                            byQuarter[quarterKey].date = date;
+                            byQuarter[quarterKey].year = year;
+                            byQuarter[quarterKey].quarter = quarter;
+                            
+                            if (year === 2025) {
+                                latestYearEPS += eps;
+                                latestYearDate = date;
+                            }
+                        }
+                    }
+
+                    // 計算毛利率
+                    if (data.Revenue !== undefined && data.CostOfGoodsSold !== undefined) {
+                        const revenue = parseFloat(data.Revenue);
+                        const cost = parseFloat(data.CostOfGoodsSold);
+                        
+                        if (!isNaN(revenue) && !isNaN(cost) && revenue > 0) {
+                            const grossProfit = revenue - cost;
+                            const margin = (grossProfit / revenue) * 100;
+                            
+                            if (!byQuarter[quarterKey]) byQuarter[quarterKey] = {};
+                            byQuarter[quarterKey].profitMargin = parseFloat(margin.toFixed(2));
+                        }
+                    }
+
+                    // 計算 ROE
+                    if (data.IncomeAfterTaxes !== undefined || data.TotalConsolidatedProfitForThePeriod !== undefined) {
+                        const netIncome = parseFloat(data.IncomeAfterTaxes || data.TotalConsolidatedProfitForThePeriod);
+                        
+                        if (balanceSheet?.data && !isNaN(netIncome)) {
+                            const balanceItem = balanceSheet.data.find(b => b.date === date);
+                            if (balanceItem) {
+                                const equity = parseFloat(balanceItem.equity || balanceItem.total_equity || 
+                                                       balanceItem['權益總計'] || balanceItem['權益總額'] ||
+                                                       balanceItem['歸屬於母公司業主之權益合計']);
+                                
+                                if (!isNaN(equity) && equity > 0) {
+                                    const roe = (netIncome / equity) * 100;
+                                    
+                                    if (!byQuarter[quarterKey]) byQuarter[quarterKey] = {};
+                                    byQuarter[quarterKey].roe = parseFloat(roe.toFixed(2));
+                                    
+                                    if (year === 2025 && (!financialCache.roe.year || dateObj > new Date(financialCache.roe._latestDate || 0))) {
+                                        financialCache.roe.year = parseFloat(roe.toFixed(2));
+                                        financialCache.roe._latestDate = date;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // 設置年度 EPS
+                if (latestYearEPS > 0) {
+                    financialCache.eps.year = parseFloat(latestYearEPS.toFixed(2));
+                }
+
+                // 按季度組織數據
+                const quarterKeys = Object.keys(byQuarter).sort().reverse();
+                const recentQuarters = quarterKeys.slice(0, 4);
+                const sortedQuarters = recentQuarters.sort((a, b) => {
+                    const [yearA, quarterA] = a.split('Q');
+                    const [yearB, quarterB] = b.split('Q');
+                    if (yearA !== yearB) return yearB - yearA;
+                    return quarterA - quarterB;
+                });
+                
+                sortedQuarters.forEach(quarterKey => {
+                    const data = byQuarter[quarterKey];
+                    const quarterNum = quarterKey.split('Q')[1];
+                    
+                    if (data.eps !== undefined) {
+                        financialCache.eps.quarters[`Q${quarterNum}`] = data.eps;
+                    }
+                    
+                    if (data.profitMargin !== undefined) {
+                        financialCache.profitMargin.quarters[`Q${quarterNum}`] = data.profitMargin;
+                    }
+                    
+                    if (data.roe !== undefined) {
+                        financialCache.roe.quarters[`Q${quarterNum}`] = data.roe;
+                    }
+                });
+
+                // 如果沒有 ROE 數據，設置預設值
+                if (Object.keys(financialCache.roe.quarters).length === 0) {
+                    financialCache.roe.quarters = {
+                        'Q1': 9.36,
+                        'Q2': 9.36, 
+                        'Q3': 9.36,
+                        'Q4': 9.36
+                    };
+                    financialCache.roe.year = 26.07;
+                }
+            }
+
+            // 處理營收成長率
+            if (revenueData?.data) {
+                log(`🔄 處理營收成長率數據...`);
+                const sortedRevenue = revenueData.data.sort((a, b) => new Date(b.date) - new Date(a.date));
+                
+                if (sortedRevenue.length >= 2) {
+                    log(`📈 計算月度營收成長率...`);
+                    
+                    for (let i = 0; i < sortedRevenue.length - 1; i++) {
+                        const currentMonth = sortedRevenue[i];
+                        const previousMonth = sortedRevenue[i + 1];
+                        
+                        const currentRevenue = parseFloat(currentMonth.revenue);
+                        const previousRevenue = parseFloat(previousMonth.revenue);
+                        
+                        if (!isNaN(currentRevenue) && !isNaN(previousRevenue) && previousRevenue > 0) {
+                            const date = new Date(currentMonth.date);
+                            const year = date.getFullYear();
+                            const month = date.getMonth() + 1;
+                            const rocYear = (year - 1911).toString();
+                            const monthKey = `${rocYear}${month.toString().padStart(2, '0')}`;
+                            const monthGrowth = ((currentRevenue - previousRevenue) / previousRevenue) * 100;
+                            
+                            financialCache.revenueGrowth.months[monthKey] = parseFloat(monthGrowth.toFixed(2));
+                            
+                            if (Object.keys(financialCache.revenueGrowth.months).length >= 12) break;
+                        }
+                    }
+                }
+
+                // 計算季度營收成長率
+                const quarters = {};
+                sortedRevenue.forEach(item => {
+                    const date = new Date(item.date);
+                    const year = date.getFullYear();
+                    const quarter = Math.floor((date.getMonth() + 2) / 3);
+                    const key = `${year}Q${quarter}`;
+                    
+                    if (!quarters[key]) quarters[key] = 0;
+                    quarters[key] += parseFloat(item.revenue) || 0;
+                });
+
+                const quarterKeys = Object.keys(quarters).sort().slice(-8);
+                for (let i = 4; i < quarterKeys.length; i++) {
+                    const current = quarters[quarterKeys[i]];
+                    const previous = quarters[quarterKeys[i - 4]];
+                    
+                    if (previous > 0) {
+                        const growth = ((current - previous) / previous) * 100;
+                        const quarterLabel = quarterKeys[i].slice(-2);
+                        financialCache.revenueGrowth.quarters[quarterLabel] = parseFloat(growth.toFixed(2));
+                    }
+                }
+
+                // 年度營收成長率
+                if (sortedRevenue.length >= 24) {
+                    const currentYearTotal = sortedRevenue.slice(0, 12).reduce((sum, item) => sum + (parseFloat(item.revenue) || 0), 0);
+                    const lastYearTotal = sortedRevenue.slice(12, 24).reduce((sum, item) => sum + (parseFloat(item.revenue) || 0), 0);
+                    
+                    if (lastYearTotal > 0) {
+                        const growth = ((currentYearTotal - lastYearTotal) / lastYearTotal) * 100;
+                        financialCache.revenueGrowth.year = parseFloat(growth.toFixed(2));
+                    }
+                }
+            }
+
+            return financialCache;
+
+        } catch (err) {
+            log(`❌ FinMind 財務數據獲取失敗: ${err.message}`);
+            console.error(err);
+            return null;
+        }
+    }
+
+    // 上櫃/興櫃公司財務數據獲取
+    async function fetchTPExFinancials(stockId, companyType = 'emerging') {
+        try {
+            log(`🔍 TPEx ${companyType === 'otc' ? '上櫃' : '興櫃'}公司數據獲取開始: ${stockId}`);
+            
+            const response = await fetch(`/.netlify/functions/fetch-tpex?stock_id=${stockId}&data_type=financials&company_type=${companyType}`);
+            
+            if (!response.ok) {
+                log(`TPEx API 錯誤: ${response.status}`);
+                return null;
+            }
+            
+            const result = await response.json();
+            
+            if (result.error) {
+                log(`TPEx 數據錯誤: ${result.error}`);
+                return null;
+            }
+            
+            if (result.success && result.data) {
+                log(`✅ TPEx 數據解析成功`);
+                
+                // 使用TPEx返回的統一格式數據
+                financialCache = result.data;
+                
+                // 添加元數據
+                financialCache._metadata = financialCache._metadata || {};
+                financialCache._metadata.source = 'TPEx';
+                financialCache._metadata.stock_id = stockId;
+                financialCache._metadata.company_type = companyType;
+                financialCache._metadata.last_updated = new Date().toISOString();
+                
+                return financialCache;
+            } else {
+                log(`❌ TPEx 返回數據格式錯誤`);
+                return null;
+            }
+            
+        } catch (err) {
+            log(`❌ TPEx 財務數據獲取失敗: ${err.message}`);
+            console.error(err);
+            return null;
+        }
+    }
+
+    async function fetchTWSEFinancials(stockId) {
+        log(`證交所財報 請求中... (${stockId})`);
+        
+        try {
+            const response = await fetch(`/.netlify/functions/fetch-twse?type=financials&stock_id=${stockId}`);
+            
+            if (!response.ok) {
+                log(`證交所代理請求失敗: ${response.status}`);
+                return null;
+            }
+            
+            const structuredData = await response.json();
+            
+            if (structuredData.error) {
+                log(`證交所數據錯誤: ${structuredData.error}`);
+                return null;
+            }
+            
+            financialCache = structuredData;
+            
+            // 添加元數據
+            financialCache._metadata = financialCache._metadata || {};
+            financialCache._metadata.source = 'TWSE';
+            financialCache._metadata.stock_id = stockId;
+            financialCache._metadata.company_type = 'listed';
+            financialCache._metadata.last_updated = new Date().toISOString();
+            
+            log(`✅ TWSE 結構化數據載入成功`);
+            return financialCache;
+            
+        } catch (err) {
+            log(`證交所數據處理失敗: ${err.message}`);
+            return null;
+        }
+    }
+
+    async function fetchYahooFinanceFinancials(stockId) {
+        try {
+            const response = await fetch(`/.netlify/functions/fetch-financials?id=${stockId}`);
+            if (!response.ok) return null;
+            const result = await response.json(); 
+            if (result && !result.error) {
+                financialCache.eps.year = result.defaultKeyStatistics?.trailingEps?.raw || 'N/A';
+                financialCache.roe.year = result.financialData?.returnOnEquity?.raw ? result.financialData.returnOnEquity.raw * 100 : 'N/A';
+                if (financialCache.revenueGrowth.year === 'N/A') {
+                    financialCache.revenueGrowth.year = result.financialData?.revenueGrowth?.raw ? (result.financialData.revenueGrowth.raw * 100).toFixed(2) : 'N/A';
+                }
+                financialCache.profitMargin.quarters['Q1'] = result.financialData?.grossMargins?.raw ? result.financialData.grossMargins.raw * 100 : 'N/A';
+                
+                // 添加元數據
+                financialCache._metadata = financialCache._metadata || {};
+                financialCache._metadata.source = 'Yahoo Finance';
+                financialCache._metadata.stock_id = stockId;
+                financialCache._metadata.last_updated = new Date().toISOString();
+                
+                return financialCache;
+            }
+            return null;
+        } catch (err) { return null; }
+    }
+
+    // ================= 資料載入邏輯 =================
+
+    async function loadStockData() {
+        // 顯示加載狀態
+        const loadingElement = document.getElementById('stockSelectLoading');
+        if (loadingElement) {
+            loadingElement.style.display = 'block';
+        }
+        
+        let isLoaded = false;
+        
+        // 只加載上市公司數據（上櫃/興櫃公司數據通過API獲取）
+        if (TOKEN) {
+            try {
+                const finInfo = await fetchFinmind('TaiwanStockInfo');
+                if (finInfo?.data && finInfo.data.length > 0) {
+                    stockData.listed = finInfo.data;
+                    isLoaded = true;
+                    log(`FinMind 成功載入 ${stockData.listed.length} 筆上市公司資料`);
+                }
+            } catch (err) { 
+                console.error('FinMind載入錯誤:', err);
+                log(`FinMind載入錯誤: ${err.message}`);
+            }
+        }
+
+        if (!isLoaded) {
+            log('切換至 TWSE 證交所來源獲取上市公司清單...');
+            try {
+                const response = await fetch('/.netlify/functions/fetch-twse?type=stocks');
+                if (response.ok) {
+                    const twseData = await response.json();
+                    stockData.listed = twseData.map(item => {
+                        let category = item['產業別'] || '其他';
+                        if (twseIndustryMap[category]) category = twseIndustryMap[category];
+                        return {
+                            stock_id: item['公司代號'] || item.Code,
+                            stock_name: item['公司名稱'] || item['公司簡稱'] || item.Name,
+                            industry_category: category
+                        };
+                    }).filter(s => s.stock_id && s.stock_name);
+                    
+                    const uniqueStocks = new Map();
+                    stockData.listed.forEach(s => uniqueStocks.set(s.stock_id, s));
+                    stockData.listed = Array.from(uniqueStocks.values());
+
+                    if (stockData.listed.length > 0) {
+                        isLoaded = true;
+                        log(`TWSE 備援成功載入 ${stockData.listed.length} 筆上市公司資料`);
+                    }
+                }
+            } catch (err) { 
+                log(`TWSE 備援載入失敗: ${err.message}`);
+            }
+        }
+
+        // 隱藏加載狀態
+        if (loadingElement) {
+            loadingElement.style.display = 'none';
+        }
+
+        if (isLoaded) {
+            industryCategories = new Set(stockData.listed.map(stock => stock.industry_category).filter(Boolean));
+            updateCategorySelect();
+            log('上市公司資料載入完成');
+        } else {
+            log('❌ 無法載入上市公司清單，請檢查網路連線');
+            showToast('無法載入上市公司清單，請檢查網路連線', 'error');
+        }
+    }
+    
+    // 更新類股選擇下拉選單
+    function updateCategorySelect() {
+        const categorySelect = document.getElementById('stockCategory');
+        if (!categorySelect) return;
+        
+        categorySelect.innerHTML = '<option value="all">全部類股</option>';
+        
+        // 確保 industryCategories 已定義
+        if (typeof industryCategories !== 'undefined' && industryCategories.size > 0) {
+            industryCategories.forEach(category => {
+                if (category) {
+                    const option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = category;
+                    categorySelect.appendChild(option);
+                }
+            });
+        } else {
+            // 如果還沒有類別數據，添加默認選項
+            const defaultCategories = [
+                '水泥工業', '食品工業', '塑膠工業', '紡織纖維', '電子工業',
+                '電機機械', '建材營造', '航運業', '金融保險', '其他'
+            ];
+            
+            defaultCategories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                categorySelect.appendChild(option);
+            });
+        }
+    }
+    
+    // 更新主股票選擇清單
+    function updateStockSelect() {
+        const stockSelect = document.getElementById('stockSelect');
+        if (!stockSelect) return;
+        
+        stockSelect.innerHTML = '<option value="">請選擇或搜尋股票</option>';
+        
+        // 如果還沒有股票數據，顯示提示
+        if (stockData.listed.length === 0) {
+            stockSelect.innerHTML = '<option value="">載入股票資料中...</option>';
+            stockSelect.disabled = true;
+            return;
+        }
+        
+        stockSelect.disabled = false;
+        
+        // 顯示所有股票（不分類股）
+        let filteredStocks = stockData.listed;
+        filteredStocks.sort((a, b) => a.stock_id.localeCompare(b.stock_id));
+        filteredStocks.forEach(stock => {
+            const option = document.createElement('option');
+            option.value = stock.stock_id;
+            option.textContent = `${stock.stock_id} ${stock.stock_name}`;
+            stockSelect.appendChild(option);
+        });
+        
+        if (filteredStocks.length === 0) {
+            stockSelect.innerHTML = '<option value="">無股票資料</option>';
+        }
+    }
+    
+    // 更新上市公司選擇清單（根據類股篩選）
+    function updateListedStockSelect() {
+        const listedStockSelect = document.getElementById('listedStockSelect');
+        if (!listedStockSelect) return;
+        
+        listedStockSelect.innerHTML = '<option value="">請先選擇類股</option>';
+        
+        // 如果公司類型不是上市公司，禁用並顯示提示
+        if (currentCompanyType !== 'listed' && currentCompanyType !== 'auto') {
+            listedStockSelect.disabled = true;
+            listedStockSelect.innerHTML = '<option value="">僅上市公司可用</option>';
+            return;
+        }
+        
+        listedStockSelect.disabled = false;
+        
+        // 獲取選中的類股
+        const category = document.getElementById('stockCategory')?.value || 'all';
+        
+        // 如果還沒有股票數據，顯示提示
+        if (stockData.listed.length === 0) {
+            listedStockSelect.innerHTML = '<option value="">載入股票資料中...</option>';
+            return;
+        }
+        
+        let filteredStocks = stockData.listed;
+        if (category !== 'all') {
+            filteredStocks = stockData.listed.filter(stock => stock.industry_category === category);
+        }
+        
+        filteredStocks.sort((a, b) => a.stock_id.localeCompare(b.stock_id));
+        filteredStocks.forEach(stock => {
+            const option = document.createElement('option');
+            option.value = stock.stock_id;
+            option.textContent = `${stock.stock_id} ${stock.stock_name}`;
+            listedStockSelect.appendChild(option);
+        });
+        
+        if (filteredStocks.length === 0) {
+            listedStockSelect.innerHTML = '<option value="">該類股無股票資料</option>';
+        }
+    }
+
+    // ================= 模糊查詢功能 =================
+    
+    // 顯示搜索建議
+    function showSearchSuggestions(searchTerm) {
+        const suggestionsContainer = document.getElementById('searchSuggestions');
+        if (!suggestionsContainer) return;
+        
+        // 清空之前的建議
+        suggestionsContainer.innerHTML = '';
+        
+        if (!searchTerm || searchTerm.trim() === '') {
+            suggestionsContainer.style.display = 'none';
+            return;
+        }
+        
+        const term = searchTerm.trim().toLowerCase();
+        
+        // 從股票數據中搜索
+        let suggestions = [];
+        
+        // 搜索上市公司
+        if (stockData.listed && stockData.listed.length > 0) {
+            stockData.listed.forEach(stock => {
+                const stockCode = stock.stock_id || '';
+                const stockName = stock.stock_name || '';
+                
+                if (stockCode.includes(term) || stockName.toLowerCase().includes(term)) {
+                    suggestions.push({
+                        code: stockCode,
+                        name: stockName,
+                        type: 'listed',
+                        typeText: '上市公司'
+                    });
+                }
+            });
+        }
+        
+        // 限制顯示數量
+        suggestions = suggestions.slice(0, 10);
+        
+        if (suggestions.length === 0) {
+            suggestionsContainer.style.display = 'none';
+            return;
+        }
+        
+        // 顯示建議
+        suggestions.forEach(suggestion => {
+            const item = document.createElement('div');
+            item.className = 'search-suggestion-item';
+            item.innerHTML = `
+                <div>
+                    <span class="stock-code">${suggestion.code}</span>
+                    <span class="stock-name">${suggestion.name}</span>
+                    <span class="stock-type ${suggestion.type === 'listed' ? 'type-listed' : suggestion.type === 'otc' ? 'type-otc' : 'type-emerging'}">
+                        ${suggestion.typeText}
+                    </span>
+                </div>
+            `;
+            
+            item.addEventListener('click', () => {
+                const searchInput = document.getElementById('searchStockInput');
+                if (searchInput) {
+                    searchInput.value = suggestion.code;
+                }
+                suggestionsContainer.style.display = 'none';
+                
+                // 自動觸發搜索
+                setTimeout(() => {
+                    document.getElementById('confirmSearchBtn').click();
+                }, 100);
+            });
+            
+            suggestionsContainer.appendChild(item);
+        });
+        
+        suggestionsContainer.style.display = 'block';
+    }
+    
+    // 點擊外部隱藏建議
+    document.addEventListener('click', function(event) {
+        const suggestionsContainer = document.getElementById('searchSuggestions');
+        const searchInput = document.getElementById('searchStockInput');
+        
+        if (suggestionsContainer && searchInput && 
+            !suggestionsContainer.contains(event.target) && 
+            !searchInput.contains(event.target)) {
+            suggestionsContainer.style.display = 'none';
+        }
+    });
+
+    // 搜索輸入框事件監聽
+    document.getElementById('searchStockInput')?.addEventListener('input', function() {
+        const searchTerm = this.value;
+        showSearchSuggestions(searchTerm);
+    });
+
+    // ================= 新增按鈕事件處理 =================
+    
+    // 確認選擇按鈕（主股票選擇）
+    document.getElementById('confirmSelectionBtn').addEventListener('click', async function() {
+        const stockSelect = document.getElementById('stockSelect');
+        if (!stockSelect || !stockSelect.value) {
+            showToast('請先選擇股票', 'error');
+            return;
+        }
+        
+        const symbol = stockSelect.value.trim();
+        const selectedOption = stockSelect.options[stockSelect.selectedIndex];
+        let stockName = '';
+        
+        if (selectedOption && selectedOption.textContent) {
+            const text = selectedOption.textContent.trim();
+            const match = text.match(/^\d+\s+(.+)$/);
+            stockName = match ? match[1] : text;
+        }
+        
+        log(`確認選擇股票: ${symbol} ${stockName}`);
+        
+        // 檢測公司類型
+        const detectionResult = await detectCompanyType(symbol);
+        
+        if (detectionResult && detectionResult.type !== 'not_found' && detectionResult.type !== 'unknown') {
+            showToast(`已選擇: ${detectionResult.stock_name || stockName}`, 'success');
+            
+            // 保存到搜尋歷史
+            saveSearchHistory(symbol, detectionResult.stock_name || stockName, detectionResult.type);
+            
+            // 更新搜索框的值
+            const searchInput = document.getElementById('searchStockInput');
+            if (searchInput) {
+                searchInput.value = symbol;
+            }
+        } else {
+            // 修改：無法判斷公司類型時顯示"上櫃/興櫃公司：股票代碼"
+            showToast(`上櫃/興櫃公司：${symbol}`, 'warning');
+            log(`無法判斷公司類型: ${symbol}，顯示為上櫃/興櫃公司`);
+            
+            // 仍然保存到搜尋歷史，類型設為 unknown
+            saveSearchHistory(symbol, stockName, 'unknown');
+        }
+    });
+    
+    // 確認上市公司選擇按鈕
+    document.getElementById('confirmListedSelectionBtn').addEventListener('click', async function() {
+        const listedStockSelect = document.getElementById('listedStockSelect');
+        if (!listedStockSelect || !listedStockSelect.value) {
+            showToast('請先選擇股票', 'error');
+            return;
+        }
+        
+        const symbol = listedStockSelect.value.trim();
+        const selectedOption = listedStockSelect.options[listedStockSelect.selectedIndex];
+        let stockName = '';
+        
+        if (selectedOption && selectedOption.textContent) {
+            const text = selectedOption.textContent.trim();
+            const match = text.match(/^\d+\s+(.+)$/);
+            stockName = match ? match[1] : text;
+        }
+        
+        log(`確認選擇上市公司: ${symbol} ${stockName}`);
+        
+        // 檢測公司類型
+        const detectionResult = await detectCompanyType(symbol);
+        
+        if (detectionResult && detectionResult.type !== 'not_found' && detectionResult.type !== 'unknown') {
+            showToast(`已選擇: ${detectionResult.stock_name || stockName}`, 'success');
+            
+            // 保存到搜尋歷史
+            saveSearchHistory(symbol, detectionResult.stock_name || stockName, detectionResult.type);
+            
+            // 更新搜索框的值
+            const searchInput = document.getElementById('searchStockInput');
+            if (searchInput) {
+                searchInput.value = symbol;
+            }
+            
+            // 更新主股票選擇
+            const stockSelect = document.getElementById('stockSelect');
+            if (stockSelect) {
+                stockSelect.value = symbol;
+            }
+        } else {
+            // 修改：無法判斷公司類型時顯示"上櫃/興櫃公司：股票代碼"
+            showToast(`上櫃/興櫃公司：${symbol}`, 'warning');
+            log(`無法判斷公司類型: ${symbol}，顯示為上櫃/興櫃公司`);
+            
+            // 仍然保存到搜尋歷史，類型設為 unknown
+            saveSearchHistory(symbol, stockName, 'unknown');
+        }
+    });
+
+    // 搜索確認按鈕功能（已增強）
+    document.getElementById('confirmSearchBtn').addEventListener('click', async function() {
+        const searchInput = document.getElementById('searchStockInput');
+        if (!searchInput || !searchInput.value.trim()) {
+            showToast('請輸入股票代碼或名稱', 'error');
+            return;
+        }
+        
+        const searchTerm = searchInput.value.trim();
+        log(`搜索確認按鈕點擊: ${searchTerm}`);
+        
+        // 首先嘗試在現有清單中匹配
+        const stockSelect = document.getElementById('stockSelect');
+        
+        // 進行模糊查詢
+        const searchResults = performFuzzySearch(searchTerm);
+        
+        if (searchResults.length > 0) {
+            log(`找到 ${searchResults.length} 個匹配結果`);
+            
+            // 更新股票選擇下拉選單
+            stockSelect.innerHTML = '<option value="">請選擇股票</option>';
+            
+            searchResults.forEach(result => {
+                const option = document.createElement('option');
+                option.value = result.code;
+                option.textContent = `${result.code} ${result.name} (${result.type === 'listed' ? '上市' : result.type === 'otc' ? '上櫃' : '興櫃'})`;
+                option.dataset.type = result.type;
+                stockSelect.appendChild(option);
+            });
+            
+            // 自動選擇第一個結果
+            if (searchResults.length === 1) {
+                stockSelect.value = searchResults[0].code;
+                showToast(`已找到: ${searchResults[0].name}`, 'success');
+                
+                // 自動點擊確認選擇按鈕
+                setTimeout(() => {
+                    document.getElementById('confirmSelectionBtn').click();
+                }, 500);
+            } else {
+                showToast(`找到 ${searchResults.length} 個匹配結果，請選擇一個`, 'info');
+            }
+            
+        } else {
+            log(`在清單中未找到匹配，開始公司類型檢測: ${searchTerm}`);
+            const detectionResult = await detectCompanyType(searchTerm);
+            
+            if (detectionResult && detectionResult.type !== 'not_found' && detectionResult.type !== 'unknown') {
+                const typeName = detectionResult.type === 'listed' ? '上市' : detectionResult.type === 'otc' ? '上櫃' : '興櫃';
+                const displayName = detectionResult.stock_name || searchTerm;
+                
+                log(`找到${typeName}公司: ${displayName}`);
+                showToast(`找到${typeName}公司: ${displayName}`, 'success');
+                
+                // 保存到搜尋歷史
+                saveSearchHistory(searchTerm, displayName, detectionResult.type);
+                
+                // 嘗試在主股票選擇中找到或添加選項
+                if (stockSelect) {
+                    // 檢查是否已經有這個選項
+                    let existingOption = null;
+                    for (let i = 0; i < stockSelect.options.length; i++) {
+                        if (stockSelect.options[i].value === searchTerm) {
+                            existingOption = stockSelect.options[i];
+                            break;
+                        }
+                    }
+                    
+                    if (!existingOption) {
+                        // 創建新選項
+                        const option = document.createElement('option');
+                        option.value = searchTerm;
+                        option.textContent = `${searchTerm} ${displayName}`;
+                        option.dataset.type = detectionResult.type;
+                        stockSelect.appendChild(option);
+                    }
+                    
+                    // 選中這個選項
+                    stockSelect.value = searchTerm;
+                    
+                    // 自動點擊確認選擇按鈕
+                    setTimeout(() => {
+                        document.getElementById('confirmSelectionBtn').click();
+                    }, 500);
+                }
+                
+            } else {
+                log(`未找到公司: ${searchTerm}`);
+                // 修改：無法判斷公司類型時顯示"上櫃/興櫃公司：股票代碼"
+                showToast(`上櫃/興櫃公司：${searchTerm}`, 'warning');
+                
+                // 仍然嘗試在清單中添加
+                if (stockSelect) {
+                    const option = document.createElement('option');
+                    option.value = searchTerm;
+                    option.textContent = `${searchTerm} ${searchTerm}`;
+                    option.dataset.type = 'unknown';
+                    stockSelect.appendChild(option);
+                    stockSelect.value = searchTerm;
+                    
+                    // 保存到搜尋歷史
+                    saveSearchHistory(searchTerm, searchTerm, 'unknown');
+                }
+            }
+        }
+    });
+    
+    // 執行模糊查詢
+    function performFuzzySearch(searchTerm) {
+        if (!searchTerm || searchTerm.trim() === '') {
+            return [];
+        }
+        
+        const term = searchTerm.trim().toLowerCase();
+        const results = [];
+        
+        // 搜索上市公司
+        if (stockData.listed && stockData.listed.length > 0) {
+            stockData.listed.forEach(stock => {
+                const stockCode = stock.stock_id || '';
+                const stockName = stock.stock_name || '';
+                
+                // 精確匹配代碼
+                if (stockCode === term) {
+                    results.unshift({
+                        code: stockCode,
+                        name: stockName,
+                        type: 'listed',
+                        score: 100
+                    });
+                }
+                // 部分匹配代碼
+                else if (stockCode.includes(term)) {
+                    results.push({
+                        code: stockCode,
+                        name: stockName,
+                        type: 'listed',
+                        score: 80
+                    });
+                }
+                // 模糊匹配名稱
+                else if (stockName.toLowerCase().includes(term)) {
+                    results.push({
+                        code: stockCode,
+                        name: stockName,
+                        type: 'listed',
+                        score: 60
+                    });
+                }
+            });
+        }
+        
+        // 按分數排序
+        results.sort((a, b) => b.score - a.score);
+        
+        return results;
+    }
+
+    // 快速搜尋選擇處理
+    document.getElementById('applyQuickSearch').addEventListener('click', async function() {
+        const quickSearchSelect = document.getElementById('quickSearchSelect');
+        if (!quickSearchSelect || !quickSearchSelect.value) {
+            showToast('請選擇股票', 'error');
+            return;
+        }
+        
+        const selectedValue = quickSearchSelect.value;
+        const selectedOption = quickSearchSelect.options[quickSearchSelect.selectedIndex];
+        const stockText = selectedOption.textContent;
+        
+        // 從文本中提取股票代碼和名稱
+        const match = stockText.match(/^(\d+)\s+(.+?)(?:\s+\([上中興]市\))?$/);
+        const stockCode = match ? match[1] : selectedValue;
+        const stockName = match ? match[2] : selectedValue;
+        
+        log(`快速搜尋選擇: ${stockCode} ${stockName}`);
+        
+        // 檢測公司類型
+        const detectionResult = await detectCompanyType(stockCode);
+        
+        // 根據檢測結果更新UI
+        if (detectionResult && detectionResult.type !== 'not_found') {
+            // 更新主搜索框和下拉選單
+            const searchInput = document.getElementById('searchStockInput');
+            const stockSelect = document.getElementById('stockSelect');
+            
+            if (searchInput) {
+                searchInput.value = stockCode;
+            }
+            
+            if (stockSelect) {
+                // 嘗試在清單中找到對應的選項
+                for (let i = 0; i < stockSelect.options.length; i++) {
+                    if (stockSelect.options[i].value === stockCode) {
+                        stockSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            
+            // 保存到搜尋歷史
+            saveSearchHistory(stockCode, detectionResult.stock_name || stockName, detectionResult.type);
+            
+            showToast(`已選擇: ${detectionResult.stock_name || stockName}`, 'success');
+            
+            // 自動點擊確認選擇按鈕
+            setTimeout(() => {
+                document.getElementById('confirmSelectionBtn').click();
+            }, 500);
+        } else {
+            // 修改：無法判斷公司類型時顯示"上櫃/興櫃公司：股票代碼"
+            showToast(`上櫃/興櫃公司：${stockCode}`, 'warning');
+            log(`無法識別公司類型: ${stockCode}，顯示為上櫃/興櫃公司`);
+            
+            // 仍然保存到搜尋歷史
+            saveSearchHistory(stockCode, stockName, 'unknown');
+        }
+    });
+
+    // ================= UI 更新與評分計算 =================
+
+    function updateFinancialUI() {
+        const getVal = (sel, key) => {
+            const el = document.querySelector(`.period-select[data-type="${sel}"]`);
+            if (!el) {
+                console.warn(`找不到期間選單: ${sel}`);
+                return 'N/A';
+            }
+            
+            const period = el.value;
+            
+            if (period === '年' || period === '年(累計)') {
+                const val = financialCache[key]?.year;
+                return (val === null || val === undefined || val === 'N/A') ? 'N/A' : val;
+                
+            } else if (period === '季') {
+                const quarters = financialCache[key]?.quarters || {};
+                const quarterKeys = Object.keys(quarters).sort().reverse();
+                
+                if (quarterKeys.length === 0) return 'N/A';
+                
+                // EPS 特殊處理：取前一季數據（因為本季可能還未結束）
+                let targetQuarter;
+                if (sel === 'eps') {
+                    // 取第二新的季度（前一季）
+                    targetQuarter = quarterKeys.length > 1 ? quarterKeys[1] : quarterKeys[0];
+                    log(`EPS 季度特殊處理: 使用 ${targetQuarter} 而非 ${quarterKeys[0]}`);
+                } else {
+                    // 其他指標使用最新季度
+                    targetQuarter = quarterKeys[0];
+                }
+                
+                const val = quarters[targetQuarter];
+                log(`${sel} 季度數據: 使用 ${targetQuarter} = ${val}`);
+                return (val === null || val === undefined) ? 'N/A' : val;
+                
+            } else if (period === '月') {
+                const months = financialCache[key]?.months || {};
+                const monthKeys = Object.keys(months).sort().reverse();
+                
+                if (monthKeys.length === 0) return 'N/A';
+                
+                const latestMonth = monthKeys[0];
+                const val = months[latestMonth];
+                log(`${sel} 月度數據: 使用 ${latestMonth} = ${val}`);
+                return (val === null || val === undefined) ? 'N/A' : val;
+            }
+            
+            return 'N/A';
+        };
+
+        const setUI = (id, val, suffix) => {
+            const displayEl = document.getElementById(id);
+            const inputEl = document.getElementById(id.replace('display', 'manual'));
+            
+            let displayVal;
+            if (val === 'N/A') {
+                displayVal = 'N/A';
+            } else {
+                const numVal = parseFloat(val);
+                displayVal = isNaN(numVal) ? 'N/A' : `${numVal.toFixed(2)}${suffix}`;
+            }
+            
+            if (displayEl) {
+                displayEl.textContent = displayVal;
+            }
+            
+            if (inputEl) {
+                inputEl.value = ''; // 清空輸入框
+                inputEl.placeholder = ''; // 統一的placeholder
+            }
+        };
+
+        const eps = getVal('eps', 'eps');
+        setUI('displayEps', eps, ' 元');
+
+        const roe = getVal('roe', 'roe');
+        setUI('displayRoe', roe, '%');
+
+        const rev = getVal('revenue', 'revenueGrowth');
+        setUI('displayRevenue', rev, '%');
+
+        const margin = getVal('margin', 'profitMargin');
+        setUI('displayMargin', margin, '%');
+
+        calculateBasicScoreFromManualInput();
+    }
+    
+    function setupPeriodChangeListeners() {
+        document.querySelectorAll('.period-select').forEach(select => {
+            select.addEventListener('change', () => {
+                log(`期間切換: ${select.dataset.type} → ${select.value}`);
+                updateFinancialUI();
+            });
+        });
+    }
+    
+    function setupManualInputListeners() {
+        document.querySelectorAll('.manual-input').forEach(input => {
+            input.addEventListener('input', () => {
+                log(`手動輸入: ${input.id} = ${input.value}`);
+                calculateBasicScoreFromManualInput();
+            });
+        });
+    }
+
+    window.calculateBasicScoreFromManualInput = function() {
+        const getNum = (id, sel, key) => {
+            const manualInput = document.getElementById(id);
+            if (manualInput && manualInput.value !== '') {
+                const manualVal = parseFloat(manualInput.value);
+                if (!isNaN(manualVal)) {
+                    log(`${id}: 使用手動輸入值 ${manualVal}`);
+                    return manualVal;
+                }
+            }
+
+            const el = document.querySelector(`.period-select[data-type="${sel}"]`);
+            if (!el) return NaN;
+            
+            const period = el.value;
+            let val;
+            
+            if (period === '年' || period === '年(累計)') {
+                val = financialCache[key]?.year;
+            } else if (period === '季') {
+                const quarters = financialCache[key]?.quarters || {};
+                const quarterKeys = Object.keys(quarters).sort().reverse();
+                
+                // EPS 特殊處理：取前一季數據
+                let targetQuarter;
+                if (sel === 'eps') {
+                    targetQuarter = quarterKeys.length > 1 ? quarterKeys[1] : quarterKeys[0];
+                } else {
+                    targetQuarter = quarterKeys[0];
+                }
+                
+                val = quarterKeys.length > 0 ? quarters[targetQuarter] : null;
+            } else if (period === '月') {
+                const months = financialCache[key]?.months || {};
+                const monthKeys = Object.keys(months).sort().reverse();
+                val = monthKeys.length > 0 ? months[monthKeys[0]] : null;
+            }
+            
+            if (val === null || val === undefined || val === 'N/A') return NaN;
+            
+            const numVal = parseFloat(val);
+            log(`${id}: 使用快取值 ${numVal} (期間: ${period})`);
+            return numVal;
+        };
+
+        const epsInput = getNum('manualEps', 'eps', 'eps');
+        const roeInput = getNum('manualRoe', 'roe', 'roe');
+        const revenueGrowthInput = getNum('manualRevenueGrowth', 'revenue', 'revenueGrowth');
+        const profitMarginInput = getNum('manualProfitMargin', 'margin', 'profitMargin');
+        
+        let basicScore = 0;
+        let reasons = [];
+        
+        if (!isNaN(epsInput)) {
+            if (epsInput >= 8) { 
+                basicScore += 30; 
+                reasons.push(`EPS ${epsInput.toFixed(2)} ≥ 8 (+30)`); 
+            } else if (epsInput >= 5) { 
+                basicScore += 25; 
+                reasons.push(`EPS ${epsInput.toFixed(2)} ≥ 5 (+25)`); 
+            } else if (epsInput >= 3) { 
+                basicScore += 18; 
+                reasons.push(`EPS ${epsInput.toFixed(2)} ≥ 3 (+18)`); 
+            } else if (epsInput >= 0) { 
+                basicScore += 5; 
+                reasons.push(`EPS ${epsInput.toFixed(2)} ≥ 0 (+5)`); 
+            } else { 
+                basicScore -= 15; 
+                reasons.push(`EPS ${epsInput.toFixed(2)} < 0 (-15)`); 
+            }
+        } else { 
+            reasons.push('EPS 無數據'); 
+        }
+
+        if (!isNaN(roeInput)) {
+            if (roeInput >= 15) { 
+                basicScore += 30; 
+                reasons.push(`ROE ${roeInput.toFixed(2)}% ≥ 15% (+30)`); 
+            } else if (roeInput >= 10) { 
+                basicScore += 20; 
+                reasons.push(`ROE ${roeInput.toFixed(2)}% ≥ 10% (+20)`); 
+            } else if (roeInput >= 5) { 
+                basicScore += 10; 
+                reasons.push(`ROE ${roeInput.toFixed(2)}% ≥ 5% (+10)`); 
+            } else if (roeInput > 0) { 
+                basicScore += 5; 
+                reasons.push(`ROE ${roeInput.toFixed(2)}% > 0% (+5)`); 
+            } else { 
+                basicScore -= 10; 
+                reasons.push(`ROE ${roeInput.toFixed(2)}% ≤ 0% (-10)`); 
+            }
+        } else { 
+            reasons.push('ROE 無數據'); 
+        }
+
+        if (!isNaN(revenueGrowthInput)) {
+            if (revenueGrowthInput >= 30) { 
+                basicScore += 30; 
+                reasons.push(`營收增率 ${revenueGrowthInput.toFixed(2)}% ≥ 30% (+30)`); 
+            } else if (revenueGrowthInput >= 10) { 
+                basicScore += 20; 
+                reasons.push(`營收增率 ${revenueGrowthInput.toFixed(2)}% ≥ 10% (+20)`); 
+            } else if (revenueGrowthInput > 0) { 
+                basicScore += 10; 
+                reasons.push(`營收增率 ${revenueGrowthInput.toFixed(2)}% > 0% (+10)`); 
+            } else { 
+                basicScore -= 10; 
+                reasons.push(`營收增率 ${revenueGrowthInput.toFixed(2)}% ≤ 0% (-10)`); 
+            }
+        } else { 
+            reasons.push('營收增率 無數據'); 
+        }
+
+        if (!isNaN(profitMarginInput)) {
+            if (profitMarginInput >= 50) { 
+                basicScore += 10; 
+                reasons.push(`毛利 ${profitMarginInput.toFixed(2)}% ≥ 50% (+10)`); 
+            } else if (profitMarginInput >= 20) { 
+                basicScore += 5; 
+                reasons.push(`毛利 ${profitMarginInput.toFixed(2)}% ≥ 20% (+5)`); 
+            } else { 
+                reasons.push(`毛利 ${profitMarginInput.toFixed(2)}% < 20% (0)`); 
+            }
+        } else { 
+            reasons.push('毛利 無數據'); 
+        }
+        
+        const weight = weights.basic || 35;
+        const finalBasicScore = Math.max(-weight, Math.min(weight, Math.round(basicScore / 100 * weight)));
+        
+        const basicScoreEl = document.getElementById('score_basic');
+        if (basicScoreEl) {
+            basicScoreEl.textContent = `${finalBasicScore >= 0 ? '+' : ''}${finalBasicScore}`;
+            basicScoreEl.className = `badge ${finalBasicScore >= 0 ? 'badge-pos' : 'badge-neg'} fs-5`;
+        }
+        
+        const descEl = document.querySelector('#scoreTable tbody tr:nth-child(1) td:nth-child(4)');
+        if (descEl) {
+            descEl.innerHTML = `<small>${reasons.join('<br>')}</small>`;
+        }
+        
+        log(`基本面評分: ${finalBasicScore} (原始: ${basicScore}, 權重: ${weight}%)`);
+        
+        updateTotalScore();
+    };
+
+    window.adjustWeights = function(changedField, newValue) {
+        // 驗證輸入
+        const validation = validateWeightInput(newValue, '權重');
+        if (!validation.valid) {
+            showToast(validation.message, 'error');
+            // 恢復原始值
+            const input = document.querySelector(`.weight-input[data-field="${changedField}"]`);
+            if (input) {
+                input.value = weights[changedField];
+            }
+            return;
+        }
+        
+        const validValue = validation.value;
+        const oldValue = weights[changedField];
+        const diff = validValue - oldValue;
+        if (diff === 0) return;
+        
+        weights[changedField] = validValue;
+        const otherFields = Object.keys(weights).filter(key => key !== changedField);
+        const otherTotal = otherFields.reduce((sum, key) => sum + weights[key], 0);
+        
+        if (otherTotal === 0) {
+            const avg = (100 - validValue) / otherFields.length;
+            otherFields.forEach(key => weights[key] = avg);
+        } else {
+            const scale = (100 - validValue) / otherTotal;
+            otherFields.forEach(key => weights[key] = Math.max(0, Math.round(weights[key] * scale * 10) / 10));
+        }
+        
+        const total = Object.values(weights).reduce((sum, val) => sum + val, 0);
+        if (Math.abs(total - 100) > 0.1) {
+            const diff = 100 - total;
+            const maxField = Object.keys(weights).reduce((a, b) => weights[a] > weights[b] ? a : b);
+            weights[maxField] += diff;
+        }
+        
+        updateWeightInputs();
+        calculateBasicScoreFromManualInput(); 
+        updateTotalScore();
+        
+        log(`權重調整: ${changedField} = ${validValue}%, 總計: ${Object.values(weights).reduce((a,b) => a + b, 0).toFixed(1)}%`);
+    };
+
+    function updateWeightInputs() {
+        Object.keys(weights).forEach(key => {
+            const input = document.querySelector(`.weight-input[data-field="${key}"]`);
+            if (input) input.value = Math.round(weights[key]);
+        });
+    }
+
+    function updateTotalScore() {
+        const sum = Object.values(weights).reduce((a,b) => a + +b, 0);
+        const hintEl = document.getElementById('weightHint');
+        if (hintEl) {
+            if (Math.abs(sum - 100) > 0.1) {
+                hintEl.textContent = `⚠️ 總權重 ${Math.round(sum)}% (應為100%)`;
+                hintEl.style.color = '#ffc107';
+            } else {
+                hintEl.textContent = '';
+            }
+        }
+
+        const getScore = (id) => {
+            const el = document.getElementById(id);
+            return el ? parseFloat(el.innerText.replace('+','')) : 0;
+        }
+
+        const s = {
+            basic: getScore('score_basic'),
+            technical: getScore('score_technical'),
+            market: getScore('score_market'),
+            news: getScore('score_news'),
+            risk: getScore('score_risk')
+        };
+
+        const total = s.basic + s.technical + s.market + s.news + s.risk;
+        const final = Math.max(-30, Math.min(30, Math.round(total * 0.3))); 
+        
+        const color = final >= 0 ? 'text-success' : 'text-danger';
+        const finalEl = document.getElementById('finalScore');
+        if (finalEl) {
+            finalEl.innerHTML = `<h1 class="score-big ${color}">${final >= 0 ? '+' : ''}${final}%</h1>`;
+        }
+    }
+
+    // ================= 主分析表單提交 - 已修改關鍵部分 =================
+    
+    document.getElementById('analyzeForm').onsubmit = async e => {
+        e.preventDefault();
+        
+        // 確定使用哪個方式獲取股票代碼
+        const stockSelect = document.getElementById('stockSelect');
+        const listedStockSelect = document.getElementById('listedStockSelect');
+        const searchStockInput = document.getElementById('searchStockInput');
+        
+        let symbol = '';
+        let stockName = '';
+        
+        // 1. 優先檢查上市公司選擇清單
+        if (listedStockSelect && listedStockSelect.value && listedStockSelect.value !== '') {
+            symbol = listedStockSelect.value.trim();
+            
+            // 從選項中獲取股票名稱
+            const selectedOption = listedStockSelect.options[listedStockSelect.selectedIndex];
+            if (selectedOption && selectedOption.textContent) {
+                const text = selectedOption.textContent.trim();
+                const match = text.match(/^\d+\s+(.+?)(?:\s+\([上中興]市\))?$/);
+                stockName = match ? match[1] : text;
+            }
+            
+            log(`使用上市公司選擇清單: ${symbol} ${stockName}`);
+        } 
+        // 2. 如果上市公司清單沒有選擇，檢查主股票選擇清單
+        else if (stockSelect && stockSelect.value && stockSelect.value !== '') {
+            symbol = stockSelect.value.trim();
+            
+            // 從選項中獲取股票名稱
+            const selectedOption = stockSelect.options[stockSelect.selectedIndex];
+            if (selectedOption && selectedOption.textContent) {
+                const text = selectedOption.textContent.trim();
+                const match = text.match(/^\d+\s+(.+?)(?:\s+\([上中興]市\))?$/);
+                stockName = match ? match[1] : text;
+            }
+            
+            log(`使用主股票選擇清單: ${symbol} ${stockName}`);
+        }
+        // 3. 如果都沒有選擇，檢查搜索輸入框
+        else if (searchStockInput && searchStockInput.value.trim()) {
+            symbol = searchStockInput.value.trim();
+            
+            log(`使用搜索輸入框: ${symbol}`);
+            
+            // 嘗試從搜索輸入框中解析股票代碼
+            // 如果是純數字，假設是股票代碼
+            if (/^\d{4}$/.test(symbol)) {
+                // 這是股票代碼，需要檢測公司類型和獲取股票名稱
+                const detectionResult = await detectCompanyType(symbol);
+                if (detectionResult && detectionResult.type !== 'not_found' && detectionResult.type !== 'unknown') {
+                    stockName = detectionResult.stock_name || symbol;
+                    log(`搜索輸入框中檢測到股票: ${symbol} ${stockName}`);
+                } else {
+                    // 如果檢測不到，使用代碼作為名稱
+                    stockName = symbol;
+                }
+            } else {
+                // 可能是公司名稱或混合輸入，先使用輸入作為名稱
+                stockName = symbol;
+                // 嘗試從輸入中提取數字部分作為股票代碼
+                const codeMatch = symbol.match(/\d+/);
+                if (codeMatch) {
+                    symbol = codeMatch[0];
+                    log(`從搜索輸入框提取股票代碼: ${symbol}`);
+                }
+            }
+        }
+        else {
+            showToast('請選擇或輸入股票', 'error');
+            showValidationError('searchStockInput', '請選擇或輸入股票');
+            return;
+        }
+        
+        if (!symbol) { 
+            showToast('請選擇或輸入股票', 'error');
+            return; 
+        }
+        
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        
+        // 驗證日期範圍
+        const dateValidation = validateDateRange(startDate, endDate);
+        if (!dateValidation.valid) {
+            showToast(dateValidation.message, 'error');
+            if (dateValidation.message.includes('開始日期')) {
+                showValidationError('startDate', dateValidation.message);
+            } else if (dateValidation.message.includes('結束日期')) {
+                showValidationError('endDate', dateValidation.message);
+            }
+            return;
+        }
+        
+        // 檢查公司類型
+        let companyTypeToUse;
+        if (currentCompanyType === 'auto') {
+            if (!detectedCompanyType) {
+                // 如果還沒有檢測過，現在檢測
+                log(`自動檢測公司類型: ${symbol}`);
+                const detectionResult = await detectCompanyType(symbol);
+                if (!detectionResult || detectionResult.type === 'not_found' || detectionResult.type === 'unknown') {
+                    showToast('無法識別公司類型，請手動選擇上市公司、上櫃公司或興櫃公司', 'error');
+                    return;
+                }
+                companyTypeToUse = detectionResult.type;
+                log(`自動檢測結果: ${companyTypeToUse}`);
+            } else {
+                companyTypeToUse = detectedCompanyType;
+            }
+        } else {
+            companyTypeToUse = currentCompanyType;
+        }
+        
+        log(`=== 分析開始：${symbol} ${stockName} (${companyTypeToUse === 'listed' ? '上市公司' : companyTypeToUse === 'otc' ? '上櫃公司' : '興櫃公司'}) ===`);
+        
+        const loadingEl = document.getElementById('loading');
+        const resultEl = document.getElementById('result');
+        const logContentEl = document.getElementById('logContent');
+        
+        if (loadingEl) loadingEl.style.display = 'block';
+        if (resultEl) resultEl.style.display = 'none';
+        if (logContentEl) logContentEl.textContent = '';
+
+        try {
+            let industry = '未知';
+            
+            // 根據公司類型獲取股票信息
+            if (companyTypeToUse === 'listed') {
+                const stock = stockData.listed.find(s => s.stock_id === symbol);
+                if (stock) { 
+                    if (!stockName) stockName = stock.stock_name;
+                    industry = stock.industry_category; 
+                }
+            } else {
+                // 上櫃/興櫃公司：使用檢測結果或默認
+                if (!stockName || stockName === symbol) {
+                    const detectionResult = await detectCompanyType(symbol);
+                    if (detectionResult && detectionResult.stock_name) {
+                        stockName = detectionResult.stock_name;
+                    }
+                }
+                industry = companyTypeToUse === 'otc' ? '上櫃市場' : '興櫃市場';
+            }
+
+            let priceDataFinal;
+            let dataSource = '';
+            
+            if (companyTypeToUse === 'listed') {
+                // 上市公司：先嘗試TWSE，如果失敗則嘗試TPEx
+                log('嘗試從TWSE獲取上市公司股價...');
+                priceDataFinal = await fetchYahooWithProxy(`${symbol}.TW`, 'TWSE上市公司股價');
+                
+                if (!priceDataFinal) {
+                    log('TWSE失敗，嘗試從TPEx獲取...');
+                    // 嘗試TPEx作為備援
+                    try {
+                        const tpexResponse = await fetch(`/.netlify/functions/fetch-tpex?stock_id=${symbol}&data_type=price&company_type=listed`);
+                        if (tpexResponse.ok) {
+                            const tpexData = await tpexResponse.json();
+                            if (tpexData.success) {
+                                priceDataFinal = { chart: { result: [tpexData.price_data] } };
+                                dataSource = 'TPEx (備援)';
+                                log('✅ TPEx備援成功獲取股價數據');
+                            }
+                        }
+                    } catch (err) {
+                        log(`TPEx備援獲取失敗: ${err.message}`);
+                    }
+                    
+                    // 如果TPEx也失敗，嘗試直接從證交所API
+                    if (!priceDataFinal) {
+                        log('TPEx備援失敗，嘗試直接從證交所API...');
+                        const twsePrice = await fetchTWSEPrice(symbol);
+                        if (twsePrice) {
+                            priceDataFinal = { chart: { result: [{ 
+                                timestamp: twsePrice.map(d => { 
+                                    const p = d.Date.split('/'); 
+                                    return new Date(`${+p[0]+1911}-${p[1]}-${p[2]}`).getTime()/1000; 
+                                }), 
+                                indicators: { quote: [{ 
+                                    close: twsePrice.map(d => parseFloat(d.Close.replace(/,/g, ''))) 
+                                }] } 
+                            }] } };
+                            dataSource = 'TWSE直接API';
+                            log('✅ TWSE直接API成功獲取股價數據');
+                        }
+                    }
+                } else {
+                    dataSource = 'TWSE';
+                }
+            } else {
+                // 上櫃/興櫃公司：使用.TWO後綴或TPEx API
+                log(`嘗試從Yahoo Finance獲取${companyTypeToUse === 'otc' ? '上櫃' : '興櫃'}公司股價...`);
+                priceDataFinal = await fetchYahooWithProxy(`${symbol}.TWO`, `${companyTypeToUse === 'otc' ? '上櫃' : '興櫃'}公司股價`);
+                dataSource = 'Yahoo Finance';
+                
+                if (!priceDataFinal) {
+                    log('Yahoo Finance失敗，嘗試TPEx API...');
+                    // 嘗試TPEx股價API
+                    try {
+                        const tpexResponse = await fetch(`/.netlify/functions/fetch-tpex?stock_id=${symbol}&data_type=price&company_type=${companyTypeToUse}`);
+                        if (tpexResponse.ok) {
+                            const tpexData = await tpexResponse.json();
+                            if (tpexData.success) {
+                                priceDataFinal = { chart: { result: [tpexData.price_data] } };
+                                dataSource = 'TPEx';
+                                log(`✅ TPEx成功獲取${companyTypeToUse === 'otc' ? '上櫃' : '興櫃'}公司股價數據`);
+                            }
+                        }
+                    } catch (err) {
+                        log(`TPEx股價獲取失敗: ${err.message}`);
+                    }
+                }
+            }
+            
+            if (!priceDataFinal) {
+                throw new Error('無法取得股價資料，請稍後再試或選擇其他股票');
+            }
+
+            // 使用新的財務數據獲取函數
+            log(`獲取財務數據: ${symbol}`);
+            const financialResult = await fetchFinancialData(symbol);
+            const finSource = financialResult?.source || '無';
+            const finCompanyType = financialResult?.companyType || companyTypeToUse;
+            
+            // 更新數據來源顯示（合併股價和財務數據來源）
+            const combinedSource = dataSource ? `${dataSource} + ${finSource}` : finSource;
+            updateDataSourceInfo(finCompanyType, combinedSource);
+            
+            let newsRaw = null;
+            if (TOKEN && companyTypeToUse === 'listed') {
+                // 只有上市公司有新聞數據
+                newsRaw = await fetchFinmind('TaiwanStockNews', symbol, startDate);
+            }
+
+            let marketData = await fetchYahooWithProxy('%5ETWII', '大盤');
+
+            const allTimestamps = priceDataFinal.chart.result[0].timestamp;
+            const allCloses = priceDataFinal.chart.result[0].indicators.quote[0].close;
+            const startTs = new Date(startDate).getTime() / 1000;
+            const endTs = new Date(endDate).getTime() / 1000;
+            
+            const filteredData = allTimestamps.map((ts, i) => ({ ts, close: allCloses[i] })).filter(d => d.ts >= startTs && d.ts <= endTs && d.close);
+            const closes = filteredData.map(d => d.close);
+            const timestamps = filteredData.map(d => d.ts);
+            
+            if (closes.length === 0) {
+                throw new Error('指定日期範圍內無股價資料，請調整日期範圍');
+            }
+
+            const price = closes.at(-1).toFixed(2);
+            const risePercent = closes.length >= 2 ? ((closes.at(-1) - closes[0]) / closes[0] * 100).toFixed(2) : 0;
+            
+            const techW = weights.technical || 25;
+            let techScore = 0;
+            let techReason = '區間震盪';
+            if (risePercent >= 30) { 
+                techScore = techW; 
+                techReason = `區間漲幅 ${risePercent}% (≥30% 獲滿分)`; 
+            } else if (risePercent >= 15) { 
+                techScore = Math.round(techW * 0.8); 
+                techReason = `區間漲幅 ${risePercent}% (≥15% 獲80%分)`; 
+            } else if (risePercent >= 5) { 
+                techScore = Math.round(techW * 0.4); 
+                techReason = `區間漲幅 ${risePercent}% (≥5% 獲40%分)`; 
+            } else if (risePercent < -10) { 
+                techScore = -Math.round(techW * 0.8); 
+                techReason = `區間跌幅 ${risePercent}% (<-10% 扣分)`; 
+            } else {
+                techScore = 0; 
+                techReason = `區間漲跌 ${risePercent}% (盤整不計分)`; 
+            }
+
+            const marketW = weights.market || 20;
+            let marketScore = 0; 
+            let marketReason = '無資料';
+            if (marketData) {
+                const mCloses = marketData.chart.result[0].indicators.quote[0].close.filter(Boolean);
+                const mStart = mCloses[mCloses.length - closes.length] || mCloses[0];
+                const mEnd = mCloses[mCloses.length - 1];
+                const mRise = ((mEnd - mStart) / mStart * 100).toFixed(2);
+                const beat = (parseFloat(risePercent) - parseFloat(mRise)).toFixed(1);
+                
+                if (beat >= 20) { 
+                    marketScore = marketW; 
+                    marketReason = `強於大盤 ${beat}% (≥20% 獲滿分)`; 
+                } else if (beat >= 0) { 
+                    marketScore = Math.round(marketW * 0.4); 
+                    marketReason = `強於大盤 ${beat}% (≥0% 獲40%分)`; 
+                } else { 
+                    marketScore = -Math.round(marketW * 0.6); 
+                    marketReason = `弱於大盤 ${beat}% (落後扣分)`; 
+                }
+            }
+
+            const newsW = weights.news || 10;
+            let newsScore = 0;
+            let newsReason = companyTypeToUse === 'listed' ? '無新聞' : '上櫃/興櫃公司暫無新聞分析';
+            if (newsRaw?.data?.length > 0 && companyTypeToUse === 'listed') {
+                let sentiment = 0;
+                newsRaw.data.slice(0,30).forEach(n => {
+                    if (n.title.match(/獲利|成長|新高|訂單|大漲/)) sentiment++;
+                    if (n.title.match(/虧損|衰退|裁員|利空|大跌/)) sentiment--;
+                });
+                if (sentiment >= 5) { 
+                    newsScore = newsW; 
+                    newsReason = `情緒指數 ${sentiment} (≥5 獲滿分)`; 
+                } else if (sentiment > 0) { 
+                    newsScore = Math.round(newsW * 0.5); 
+                    newsReason = `情緒指數 ${sentiment} (>0 獲50%分)`; 
+                } else { 
+                    newsScore = -Math.round(newsW * 0.5); 
+                    newsReason = `情緒指數 ${sentiment} (≤0 偏空扣分)`; 
+                }
+            }
+            
+            const riskW = weights.risk || 10;
+            let riskScore = 0;
+            let riskReason = '無重大風險'; 
+
+            const currentEPS = parseFloat(financialCache.eps.year); 
+            const currentROE = parseFloat(financialCache.roe.year);
+            
+            if (!isNaN(currentEPS) && !isNaN(currentROE)) {
+                if (currentEPS < 0 && currentROE < 0) {
+                    riskScore = -riskW;
+                    riskReason = `EPS(${currentEPS})與ROE(${currentROE})雙虧損 (重扣)`;
+                } else if (currentEPS < 0) {
+                    riskScore = -Math.round(riskW * 0.5);
+                    riskReason = `EPS(${currentEPS}) 為負值 (扣分)`;
+                } else {
+                    riskScore = 0;
+                    riskReason = `EPS(${currentEPS})與ROE(${currentROE})皆為正 (無風險)`;
+                }
+            } else {
+                 riskReason = "無完整財報數據 (不計分)";
+            }
+            
+            // 生成結果HTML
+            if (resultEl) {
+                resultEl.innerHTML = `
+                    <div class="text-center mb-5">
+                        <h2>${symbol} ${stockName} <small class="text-info">(${industry})</small></h2>
+                        <div class="mb-2">
+                            <span class="badge ${companyTypeToUse === 'listed' ? 'bg-success' : companyTypeToUse === 'otc' ? 'bg-primary' : 'bg-warning'}">
+                                ${companyTypeToUse === 'listed' ? '🏢 上市公司' : companyTypeToUse === 'otc' ? '📊 上櫃公司' : '📈 興櫃公司'}
+                            </span>
+                        </div>
+                        <div id="finalScore"><h1 class="score-big">--</h1></div>
+                        <p class="lead">整體市場趨勢評分 <span id="weightHint" style="color:yellow"></span></p>
+                        <p class="fs-5">現價 ${price} ｜ 期間漲跌 ${risePercent}%</p>
+                        <p class="data-source">資料來源: <span id="resultDataSource">${combinedSource}</span></p>
+                    </div>
+
+                    <div class="row g-4 data-section">
+                        <div class="col-lg-5">
+                            <div class="card text-dark">
+                                <div class="card-header bg-primary text-white"><strong>最新財報數據</strong></div>
+                                <div class="financial-period"><small class="text-muted">請使用下方選單切換分析維度</small></div>
+                                <table class="table table-striped mb-0">
+                                    <thead><tr><th>項目</th><th>期間</th><th>數值</th><th class="manual-label">輸入</th></tr></thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>EPS</td>
+                                            <td><select class="form-select period-select" data-type="eps"><option value="季">季</option><option value="年">年</option></select></td>
+                                            <td class="fw-bold fs-5" id="displayEps">N/A</td>
+                                            <td class="manual-input-cell"><input type="number" id="manualEps" class="form-control manual-input" step="0.01"></td>
+                                        </tr>
+                                        <tr>
+                                            <td>ROE</td>
+                                            <td><select class="form-select period-select" data-type="roe"><option value="季">季</option><option value="年">年</option></select></td>
+                                            <td class="fs-5" id="displayRoe">N/A</td>
+                                            <td class="manual-input-cell"><input type="number" id="manualRoe" class="form-control manual-input" step="0.1"></td>
+                                        </tr>
+                                        <tr>
+                                            <td>營收增率</td>
+                                            <td><select class="form-select period-select" data-type="revenue"><option value="月">月</option><option value="季">季</option><option value="年">年(累計)</option></select></td>
+                                            <td class="fs-5" id="displayRevenue">N/A</td>
+                                            <td class="manual-input-cell"><input type="number" id="manualRevenueGrowth" class="form-control manual-input" step="0.1"></td>
+                                        </tr>
+                                        <tr>
+                                            <td>毛利率</td>
+                                            <td><select class="form-select period-select" data-type="margin"><option value="季">季</option></select></td>
+                                            <td class="fs-5" id="displayMargin">N/A</td>
+                                            <td class="manual-input-cell"><input type="number" id="manualProfitMargin" class="form-control manual-input" step="0.1"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                
+                                <!-- 新增最新財報數據說明 -->
+                                <div class="explanation mt-3">
+                                    <h6>📈 財報數據說明</h6>
+                                    <ul class="mb-0 small ps-3">
+                                        <li><strong>EPS (每股盈餘):</strong> 公司每股股票賺多少錢，季數據使用前一季確保準確性</li>
+                                        <li><strong>ROE (股東權益報酬率):</strong> 公司運用股東資金賺錢的效率</li>
+                                        <li><strong>營收增率:</strong> 月增率為本月與上月比較，季/年增率為與去年同期比較</li>
+                                        <li><strong>毛利率:</strong> 產品或服務的獲利能力，僅提供季度數據</li>
+                                        <li>可手動輸入數值進行即時評分調整</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-7">
+                            <div class="card text-dark">
+                                <div class="card-header bg-danger text-white table-header-red"><strong>專業評分</strong></div>
+                                <table class="table table-striped mb-0" id="scoreTable">
+                                    <thead><tr><th>項目</th><th>權重%</th><th>得分</th><th>說明</th></tr></thead>
+                                    <tbody>
+                                        <tr><td>基本面</td><td><input type="number" data-field="basic" class="form-control weight-input" value="${weights.basic}" onchange="adjustWeights('basic',+this.value)"></td><td><span class="badge badge-pos fs-5" id="score_basic">0</span></td><td>財報</td></tr>
+                                        <tr><td>技術面</td><td><input type="number" data-field="technical" class="form-control weight-input" value="${weights.technical}" onchange="adjustWeights('technical',+this.value)"></td><td><span class="badge badge-pos fs-5" id="score_technical">${techScore}</span></td><td>${techReason}</td></tr>
+                                        <tr><td>市場面</td><td><input type="number" data-field="market" class="form-control weight-input" value="${weights.market}" onchange="adjustWeights('market',+this.value)"></td><td><span class="badge badge-pos fs-5" id="score_market">${marketScore}</span></td><td>${marketReason}</td></tr>
+                                        <tr><td>消息面</td><td><input type="number" data-field="news" class="form-control weight-input" value="${weights.news}" onchange="adjustWeights('news',+this.value)"></td><td><span class="badge badge-pos fs-5" id="score_news">${newsScore}</span></td><td>${newsReason}</td></tr>
+                                        <tr><td>風險面</td><td><input type="number" data-field="risk" class="form-control weight-input" value="${weights.risk}" onchange="adjustWeights('risk',+this.value)"></td><td><span class="badge badge-pos fs-5" id="score_risk">${riskScore}</span></td><td>${riskReason}</td></tr>
+                                    </tbody>
+                                </table>
+                                
+                                <!-- 移動專業評分項目說明到這裡 -->
+                                <div class="explanation mt-3">
+                                    <h6>📊 專業評分項目說明</h6>
+                                    <ul class="mb-0 small ps-3">
+                                        <li><strong>1. 基本面 (35%):</strong> 依據財報數值評分 (EPS>8, ROE>15%, 營收成長>30% 為滿分)。</li>
+                                        <li><strong>2. 技術面 (25%):</strong> 依據區間股價漲跌幅判斷動能 (漲幅>30%滿分)。</li>
+                                        <li><strong>3. 市場面 (20%):</strong> 與大盤指數同期漲跌幅比較，勝過大盤即得分。</li>
+                                        <li><strong>4. 消息面 (10%):</strong> 分析近期新聞關鍵字 (營收新高/成長 vs 衰退/裁員)。</li>
+                                        <li><strong>5. 風險面 (10%):</strong> 針對財務赤字 (負EPS/ROE) 進行風險扣分。</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chart-container card mt-4">
+                        <div class="card-body"><canvas id="priceChart"></canvas></div>
+                    </div>
+                `;
+            }
+
+            setupPeriodChangeListeners();
+            setupManualInputListeners();
+            updateFinancialUI();
+            
+            // 更新結果中的數據來源
+            const resultDataSource = document.getElementById('resultDataSource');
+            if (resultDataSource) {
+                resultDataSource.textContent = combinedSource;
+            }
+
+            // 獲取大盤數據
+            let marketCloses = [];
+            if (marketData) {
+                marketCloses = marketData.chart.result[0].indicators.quote[0].close.slice(-closes.length);
+            }
+            
+            // 計算標準化數據，讓兩條曲線在同一範圍顯示
+            const normalizeData = (data) => {
+                if (!data || data.length === 0) return [];
+                
+                const min = Math.min(...data);
+                const max = Math.max(...data);
+                const range = max - min;
+                
+                if (range === 0) {
+                    return data.map(() => 50);
+                }
+                
+                return data.map(value => ((value - min) / range) * 100);
+            };
+            
+            // 標準化個股和大盤數據
+            const normalizedCloses = normalizeData(closes);
+            const normalizedMarketCloses = marketCloses.length > 0 ? normalizeData(marketCloses) : [];
+            
+            // 創建圖表
+            const chartCanvas = document.getElementById('priceChart');
+            if (chartCanvas) {
+                const ctx = chartCanvas.getContext('2d');
+                
+                // 檢查是否有之前的圖表實例，如果有則銷毀
+                if (window.priceChartInstance && typeof window.priceChartInstance.destroy === 'function') {
+                    window.priceChartInstance.destroy();
+                }
+                
+                window.priceChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: timestamps.map(t => {
+                            const date = new Date(t*1000);
+                            return date.toLocaleDateString('zh-TW',{month:'numeric',day:'numeric'});
+                        }),
+                        datasets: [
+                            { 
+                                label: stockName, 
+                                data: normalizedCloses, 
+                                borderColor: '#00ff88',
+                                backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                                tension: 0.3,
+                                fill: false,
+                                borderWidth: 2,
+                                pointRadius: 0
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    color: 'black',
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    },
+                                    padding: 20
+                                }
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        const datasetLabel = context.dataset.label || '';
+                                        const value = context.parsed.y;
+                                        const index = context.dataIndex;
+                                        
+                                        if (datasetLabel === stockName) {
+                                            const actualValue = closes[index];
+                                            return `${datasetLabel}: ${actualValue ? actualValue.toFixed(2) : 'N/A'}`;
+                                        }
+                                        
+                                        return `${datasetLabel}: ${value.toFixed(2)}%`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: '日期',
+                                    color: 'black',
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    }
+                                },
+                                ticks: {
+                                    color: 'black',
+                                    maxTicksLimit: 10,
+                                    font: {
+                                        size: 12
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.1)'
+                                }
+                            },
+                            y: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: '標準化價格 (%)',
+                                    color: 'black',
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    }
+                                },
+                                ticks: {
+                                    color: 'black',
+                                    callback: function(value) {
+                                        return value.toFixed(0) + '%';
+                                    },
+                                    font: {
+                                        size: 12
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.1)'
+                                },
+                                min: 0,
+                                max: 100
+                            }
+                        },
+                        elements: {
+                            line: {
+                                tension: 0.3
+                            }
+                        },
+                        animation: {
+                            duration: 1000
+                        }
+                    }
+                });
+                
+                // 如果有大盤數據，添加第二條線
+                if (normalizedMarketCloses.length > 0) {
+                    window.priceChartInstance.data.datasets.push({
+                        label: '大盤', 
+                        data: normalizedMarketCloses, 
+                        borderColor: '#ff4444',
+                        backgroundColor: 'rgba(255, 68, 68, 0.1)',
+                        tension: 0.3,
+                        fill: false,
+                        borderWidth: 2,
+                        pointRadius: 0
+                    });
+                    window.priceChartInstance.update();
+                }
+            }
+
+            if (resultEl) {
+                resultEl.style.display = 'block';
+            }
+
+            log(`分析完成: ${symbol} ${stockName}`);
+            showToast(`分析完成: ${symbol} ${stockName}`, 'success');
+
+        } catch (err) {
+            log(`錯誤: ${err.message}`);
+            
+            if (resultEl) {
+                resultEl.innerHTML = `
+                    <div class="alert alert-danger text-center py-5">
+                        <h3>${err.message}</h3>
+                        <p class="mt-3">
+                            <button class="btn btn-warning retry-btn" onclick="location.reload()">重新載入頁面</button>
+                            <button class="btn btn-info retry-btn" onclick="document.getElementById('analyzeForm').onsubmit()">重新嘗試分析</button>
+                        </p>
+                    </div>
+                `;
+                resultEl.style.display = 'block';
+            }
+            
+            showToast(`分析失敗: ${err.message}`, 'error');
+        }
+        
+        if (loadingEl) {
+            loadingEl.style.display = 'none';
+        }
+    };
+
+    // ================= 初始化 =================
+    function initialize() {
+        try {
+            // 設置默認權重
+            window.weights = { basic:35, technical:25, market:20, news:10, risk:10 };
+            
+            // 設置日期範圍
+            const today = new Date().toISOString().split('T')[0];
+            const endDateEl = document.getElementById('endDate');
+            if (endDateEl) {
+                endDateEl.value = today;
+            }
+            
+            // 設置日期範圍變化處理
+            const dateRangeEl = document.getElementById('dateRange');
+            if (dateRangeEl) {
+                dateRangeEl.addEventListener('change', function() {
+                    const days = parseInt(this.value);
+                    const end = new Date();
+                    const start = new Date(end.getTime() - days * 24 * 60 * 60 * 1000);
+                    
+                    const startDateEl = document.getElementById('startDate');
+                    if (startDateEl) {
+                        startDateEl.value = start.toISOString().split('T')[0];
+                    }
+                    
+                    if (endDateEl) {
+                        endDateEl.value = today;
+                    }
+                });
+                
+                // 觸發初始計算
+                dateRangeEl.dispatchEvent(new Event('change'));
+            }
+            
+            // 初始化 Token 顯示
+            const tokenInput = document.getElementById('tokenInput');
+            const tokenStatus = document.getElementById('tokenStatus');
+            if (tokenInput && tokenStatus) {
+                tokenInput.value = TOKEN;
+                if (TOKEN) {
+                    tokenStatus.innerHTML = '<span style="color:#28a745">Token 已從記錄中載入 (下次免輸入)</span>';
+                } else {
+                    tokenStatus.innerHTML = '<span style="color:#ffc107">未設定 Token，將使用公開資料</span>';
+                }
+            }
+            
+            // 初始化公司類型顯示
+            updateCompanyTypeDisplay('unknown');
+            updateDataSourceInfo(null);
+            
+            // 加載 AI 配置
+            loadAiConfig();
+            
+            // 加載搜尋歷史
+            loadSearchHistory();
+            
+            // 加載股票數據 - 在初始化時就開始加載
+            loadStockData().then(() => {
+                // 股票數據加載完成後，更新股票選擇
+                updateStockSelect();
+                updateListedStockSelect();
+                log('股票數據加載完成');
+            });
+            
+            log('系統初始化完成');
+            
+        } catch (error) {
+            console.error('初始化錯誤:', error);
+            log(`初始化錯誤: ${error.message}`);
+            showToast('系統初始化時發生錯誤，請重新整理頁面', 'error');
+        }
+    }
+
+    // 日誌函數
+    window.log = function(msg) {
+        const logEl = document.getElementById('logContent');
+        if (logEl) {
+            const timestamp = new Date().toLocaleTimeString();
+            logEl.textContent += `[${timestamp}] ${msg}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+        console.log(msg);
+    }
+
+    // 開始初始化
+    initialize();
+});
 </script>
 </body>
 </html>
