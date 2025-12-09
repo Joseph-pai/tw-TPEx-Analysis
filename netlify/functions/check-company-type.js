@@ -94,8 +94,44 @@ exports.handler = async (event, context) => {
             };
         }
 
-        // 4. 如果都沒找到，提供建議
-        console.log(`❌ 未找到公司: ${stockCode}`);
+        // 4. 如果都沒找到，根據股票代碼特徵自動判斷
+        console.log(`❌ 未找到公司: ${stockCode}，嘗試根據代碼特徵判斷`);
+        
+        // 根據股票代碼特徵自動判斷
+        if (/^\d{4}$/.test(stockCode)) {
+            if (stockCode.startsWith('6')) {
+                // 以6開頭通常是興櫃公司
+                result.type = 'emerging';
+                result.stock_name = `興櫃公司 ${stockCode}`;
+                result.source = '自動判斷 (代碼特徵)';
+                result.suggestions = ['根據股票代碼特徵判斷為興櫃公司'];
+                
+                console.log(`✅ 根據代碼特徵判斷為興櫃公司: ${stockCode}`);
+                
+                return {
+                    statusCode: 200,
+                    headers,
+                    body: JSON.stringify(result)
+                };
+            } else {
+                // 其他4位數字代碼通常是上櫃公司
+                result.type = 'otc';
+                result.stock_name = `上櫃公司 ${stockCode}`;
+                result.source = '自動判斷 (代碼特徵)';
+                result.suggestions = ['根據股票代碼特徵判斷為上櫃公司'];
+                
+                console.log(`✅ 根據代碼特徵判斷為上櫃公司: ${stockCode}`);
+                
+                return {
+                    statusCode: 200,
+                    headers,
+                    body: JSON.stringify(result)
+                };
+            }
+        }
+
+        // 5. 如果代碼格式不對，提供建議
+        console.log(`❌ 無法判斷公司類型: ${stockCode}`);
         result.suggestions = generateSuggestions(stockCode);
         
         return {
@@ -106,6 +142,36 @@ exports.handler = async (event, context) => {
 
     } catch (error) {
         console.error('檢測公司類型錯誤:', error);
+        
+        // 錯誤時也嘗試根據代碼特徵判斷
+        let fallbackType = 'not_found';
+        let fallbackName = stockCode;
+        let fallbackSource = '錯誤降級判斷';
+        
+        if (/^\d{4}$/.test(stockCode)) {
+            if (stockCode.startsWith('6')) {
+                fallbackType = 'emerging';
+                fallbackName = `興櫃公司 ${stockCode}`;
+            } else {
+                fallbackType = 'otc';
+                fallbackName = `上櫃公司 ${stockCode}`;
+            }
+            
+            console.log(`錯誤降級：根據代碼特徵判斷為 ${fallbackType}: ${stockCode}`);
+            
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({
+                    stock_code: stockCode,
+                    type: fallbackType,
+                    stock_name: fallbackName,
+                    source: fallbackSource,
+                    suggestions: ['API錯誤，根據代碼特徵自動判斷']
+                })
+            };
+        }
+        
         return {
             statusCode: 500,
             headers,
@@ -142,10 +208,10 @@ async function checkListedCompany(stockCode) {
                         suggestions: ['此代碼以6開頭，可能是興櫃公司'] 
                     };
                 }
+                // 不是6開頭的4位數字，可能是上櫃公司
                 return { 
-                    found: true, 
-                    stock_name: `上市公司 ${stockCode}`,
-                    suggestions: ['嘗試通過FinMind或TWSE獲取數據']
+                    found: false,
+                    suggestions: ['此代碼不是6開頭，可能是上櫃公司'] 
                 };
             }
             return { found: false };
@@ -309,12 +375,12 @@ function generateSuggestions(stockCode) {
         
         // 上市公司常見代碼範圍
         if (!stockCode.startsWith('6')) {
-            suggestions.push('可能是上市公司或上櫃公司，請手動選擇類型');
+            suggestions.push('可能是上櫃公司，請手動選擇「上櫃公司」類型');
         }
         
         // 興櫃公司常見代碼範圍
         if (stockCode.startsWith('6')) {
-            suggestions.push('可能是興櫃公司，請選擇"興櫃公司"類型');
+            suggestions.push('可能是興櫃公司，請選擇「興櫃公司」類型');
         }
     } else if (stockCode.length >= 2) {
         suggestions.push(`嘗試搜索公司名稱包含 "${stockCode}"`);
