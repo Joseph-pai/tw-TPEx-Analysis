@@ -399,7 +399,8 @@
     <div class="row justify-content-center mb-4">
         <div class="col-md-12">
             <div class="card">
-                <div class="card-header bg-danger text-white">
+                <!-- 修改1：股票選擇標題背景改為藍紫色 -->
+                <div class="card-header bg-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;">
                     <strong>📊 股票選擇</strong>
                 </div>
                 <div class="card-body">
@@ -1852,6 +1853,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
+        // 新增：如果通過上述方式都沒有找到，檢查快速搜尋歷史
+        if (!symbol) {
+            // 檢查是否有最後選擇的股票（從搜尋歷史中獲取）
+            if (searchHistory.length > 0) {
+                const lastSelected = searchHistory[0];
+                symbol = lastSelected.code;
+                stockName = lastSelected.name;
+                log(`使用搜尋歷史中的最後選擇: ${symbol} ${stockName}`);
+            }
+        }
+        
         if (!symbol) {
             showToast('請先選擇股票', 'error');
             return;
@@ -1999,6 +2011,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const text = selectedOption.textContent.trim();
                 const match = text.match(/^\d+\s+(.+)$/);
                 stockName = match ? match[1] : text;
+            }
+        }
+        
+        // 新增：如果通過上述方式都沒有找到，檢查快速搜尋歷史
+        if (!symbol) {
+            // 檢查是否有最後選擇的股票（從搜尋歷史中獲取）
+            if (searchHistory.length > 0) {
+                const lastSelected = searchHistory[0];
+                symbol = lastSelected.code;
+                stockName = lastSelected.name;
+                log(`使用搜尋歷史中的最後選擇: ${symbol} ${stockName}`);
             }
         }
         
@@ -3669,7 +3692,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // 3. 自動檢測公司類型
+        // 3. 檢測公司類型
         const detectionResult = await detectCompanyType(stockCode);
         
         if (detectionResult && detectionResult.type !== 'not_found' && detectionResult.type !== 'unknown') {
