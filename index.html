@@ -133,6 +133,7 @@
             .date-range-container {
                 flex-direction: row;
                 align-items: center;
+                justify-content: space-between;
                 flex-wrap: wrap;
             }
         }
@@ -149,7 +150,8 @@
                 flex-direction: row;
                 align-items: center;
                 flex-wrap: wrap;
-                gap: 10px;
+                gap: 15px;
+                flex: 1;
             }
         }
         
@@ -213,7 +215,7 @@
             min-width: 120px;
         }
         
-        /* 立即分析按鈕加大20% */
+        /* 立即分析按鈕加大20%並置中 */
         .analyze-btn-container {
             display: flex;
             justify-content: center;
@@ -225,7 +227,7 @@
             .analyze-btn-container {
                 width: auto;
                 margin-top: 0;
-                justify-content: flex-start;
+                flex: 0 0 auto;
             }
         }
         
@@ -261,6 +263,43 @@
         /* AI 分析助手標題背景改為深綠色 */
         .ai-analysis-header {
             background-color: #198754 !important; /* 深綠色 */
+        }
+        
+        /* AI 分析按鈕樣式 - 修改：全部使用填充顏色 */
+        .ai-btn-primary {
+            background-color: #007bff !important;
+            border-color: #007bff !important;
+            color: white !important;
+        }
+        
+        .ai-btn-success {
+            background-color: #28a745 !important;
+            border-color: #28a745 !important;
+            color: white !important;
+        }
+        
+        .ai-btn-danger {
+            background-color: #dc3545 !important;
+            border-color: #dc3545 !important;
+            color: white !important;
+        }
+        
+        .ai-btn-warning {
+            background-color: #ffc107 !important;
+            border-color: #ffc107 !important;
+            color: #212529 !important;
+        }
+        
+        .ai-btn-info {
+            background-color: #17a2b8 !important;
+            border-color: #17a2b8 !important;
+            color: white !important;
+        }
+        
+        .ai-btn-secondary {
+            background-color: #6c757d !important;
+            border-color: #6c757d !important;
+            color: white !important;
         }
         
         /* 響應式表格調整 */
@@ -542,7 +581,7 @@
                             <label class="form-label">API Key</label>
                             <div class="input-group">
                                 <input type="password" id="aiApiKey" class="form-control" placeholder="輸入選擇平台的 API Key">
-                                <button class="btn btn-outline-danger" type="button" id="verifyAiKey">驗證</button>
+                                <button class="btn ai-btn-danger" type="button" id="verifyAiKey">驗證</button>
                             </div>
                             <small class="text-muted" id="apiKeyHint">請輸入有效的API Key</small>
                         </div>
@@ -563,20 +602,20 @@
                     <div class="row mt-3">
                         <div class="col-12">
                             <div class="d-flex gap-2 flex-wrap">
-                                <button class="btn btn-danger" id="aiAnalyzeBtn" disabled>
+                                <button class="btn ai-btn-danger" id="aiAnalyzeBtn" disabled>
                                     <span class="spinner-border spinner-border-sm me-2" id="aiSpinner" style="display: none;"></span>
                                     🤖 開始雙重分析
                                 </button>
-                                <button class="btn btn-outline-secondary" id="clearAiAnalysis">
+                                <button class="btn ai-btn-secondary" id="clearAiAnalysis">
                                     🗑️ 清除所有分析
                                 </button>
-                                <button class="btn btn-outline-danger" id="testConnectionBtn">
+                                <button class="btn ai-btn-info" id="testConnectionBtn">
                                     🔗 測試連線
                                 </button>
-                                <button class="btn btn-outline-danger" id="singleNewsAnalysis" disabled>
+                                <button class="btn ai-btn-primary" id="singleNewsAnalysis" disabled>
                                     📰 僅消息面分析
                                 </button>
-                                <button class="btn btn-outline-danger" id="singleRiskAnalysis" disabled>
+                                <button class="btn ai-btn-warning" id="singleRiskAnalysis" disabled>
                                     ⚠️ 僅風險面分析
                                 </button>
                                 <div id="aiKeyStatus" class="ms-2 align-self-center"></div>
@@ -626,7 +665,7 @@
                                                 <strong>建議: </strong>
                                                 <span id="newsComment" class="text-muted">--</span>
                                             </div>
-                                            <button class="btn btn-sm btn-danger w-100 mt-2" id="applyNewsScore">
+                                            <button class="btn ai-btn-success w-100 mt-2" id="applyNewsScore">
                                                 ✅ 應用消息面評分
                                             </button>
                                         </div>
@@ -658,7 +697,7 @@
                                                 <strong>建議: </strong>
                                                 <span id="riskComment" class="text-muted">--</span>
                                             </div>
-                                            <button class="btn btn-sm btn-danger w-100 mt-2" id="applyRiskScore">
+                                            <button class="btn ai-btn-success w-100 mt-2" id="applyRiskScore">
                                                 ✅ 應用風險面評分
                                             </button>
                                         </div>
@@ -689,7 +728,7 @@
                                             </div>
                                         </div>
                                         <div class="text-center mt-3">
-                                            <button class="btn btn-danger" id="applyBothScores">
+                                            <button class="btn ai-btn-success" id="applyBothScores">
                                                 ✅ 同時應用兩項評分
                                             </button>
                                             <small class="text-muted d-block mt-2">將同時更新消息面(10%)和風險面(10%)的評分</small>
@@ -2363,7 +2402,7 @@ document.addEventListener('DOMContentLoaded', () => {
             roe: { quarters: {}, year: null },
             revenueGrowth: { months: {}, quarters: {}, year: null },
             profitMargin: { quarters: {}, year: null },
-            _metadata: { source: '', stock_id: stockId, last_updated: new Date().toISOString() }
+            _metadata: { source: '', stock_id: stockId, last_updated: '' }
         };
         
         let source = 'Unknown';
@@ -3002,7 +3041,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ================= 模糊查詢功能增強 =================
     
-    // 顯示搜索建議 - 增強版（支援中英文關鍵字）
+    // 顯示搜索建議 - 增強版（支援中英文關鍵字，優先顯示以搜索詞開頭的股票名稱）
     function showSearchSuggestions(searchTerm) {
         const suggestionsContainer = document.getElementById('searchSuggestions');
         if (!suggestionsContainer) return;
@@ -3030,21 +3069,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 計算匹配分數
                 let score = 0;
                 
-                // 精確匹配代碼（最高分）
-                if (stockCode === term) {
+                // 修改1：優先顯示以搜索詞開頭的股票名稱（最高分）
+                if (stockNameLower.startsWith(term)) {
                     score = 100;
+                }
+                // 精確匹配代碼
+                else if (stockCode === term) {
+                    score = 95;
                 }
                 // 部分匹配代碼
                 else if (stockCode.includes(term)) {
-                    score = 80;
+                    score = 90;
                 }
                 // 精確匹配公司名稱
                 else if (stockNameLower === term) {
-                    score = 90;
+                    score = 85;
                 }
-                // 包含整個搜索詞
+                // 包含整個搜索詞（但不開頭）
                 else if (stockNameLower.includes(term)) {
-                    score = 70;
+                    score = 80;
                 }
                 // 分割單詞搜索（支援中英文）
                 else {
@@ -3086,24 +3129,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // 按分數排序（分數相同時按第一個中文字或英文字母排序）
+        // 按分數排序（分數相同時按股票代碼排序）
         suggestions.sort((a, b) => {
             if (b.score !== a.score) {
                 return b.score - a.score;
             }
             
-            // 分數相同時，按第一個中文字或英文字母排序
-            const getFirstChar = (str) => {
-                if (!str) return '';
-                // 移除股票代碼
-                const nameOnly = str.replace(/^\d+\s*/, '');
-                return nameOnly.charAt(0);
-            };
-            
-            const charA = getFirstChar(a.name);
-            const charB = getFirstChar(b.name);
-            
-            return charA.localeCompare(charB, 'zh-Hant');
+            // 分數相同時，按股票代碼排序
+            return a.code.localeCompare(b.code);
         });
         
         // 限制顯示數量
@@ -3478,7 +3511,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // 執行增強版模糊查詢（支援中英文）
+    // 執行增強版模糊查詢（支援中英文，優先顯示以搜索詞開頭的股票名稱）
     function performEnhancedFuzzySearch(searchTerm) {
         if (!searchTerm || searchTerm.trim() === '') {
             return [];
@@ -3497,21 +3530,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 計算匹配分數
                 let score = 0;
                 
-                // 精確匹配代碼（最高分）
-                if (stockCode === term) {
+                // 修改1：優先顯示以搜索詞開頭的股票名稱（最高分）
+                if (stockNameLower.startsWith(term)) {
                     score = 100;
+                }
+                // 精確匹配代碼
+                else if (stockCode === term) {
+                    score = 95;
                 }
                 // 部分匹配代碼
                 else if (stockCode.includes(term)) {
-                    score = 80;
+                    score = 90;
                 }
                 // 精確匹配公司名稱
                 else if (stockNameLower === term) {
-                    score = 90;
+                    score = 85;
                 }
-                // 包含整個搜索詞
+                // 包含整個搜索詞（但不開頭）
                 else if (stockNameLower.includes(term)) {
-                    score = 70;
+                    score = 80;
                 }
                 // 分割單詞搜索（支援中英文）
                 else {
@@ -3552,24 +3589,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // 按分數排序（分數相同時按第一個中文字或英文字母排序）
+        // 按分數排序（分數相同時按股票代碼排序）
         results.sort((a, b) => {
             if (b.score !== a.score) {
                 return b.score - a.score;
             }
             
-            // 分數相同時，按第一個中文字或英文字母排序
-            const getFirstChar = (str) => {
-                if (!str) return '';
-                // 移除股票代碼
-                const nameOnly = str.replace(/^\d+\s*/, '');
-                return nameOnly.charAt(0);
-            };
-            
-            const charA = getFirstChar(a.name);
-            const charB = getFirstChar(b.name);
-            
-            return charA.localeCompare(charB, 'zh-Hant');
+            // 分數相同時，按股票代碼排序
+            return a.code.localeCompare(b.code);
         });
         
         return results;
