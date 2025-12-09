@@ -8,9 +8,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <style>
         body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: white; font-family: 'Microsoft JhengHei',sans-serif; }
-        .container { max-width: 1350px; }
+        .container { max-width: 1350px; width: 100%; padding-left: 15px; padding-right: 15px; }
         .card { background: rgba(255,255,255,0.12); backdrop-filter: blur(12px); border: none; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
-        .score-big { font-size: 6.5rem; font-weight: 900; text-shadow: 0 6px 15px rgba(0,0,0,0.6); }
+        .score-big { font-size: clamp(3rem, 10vw, 6.5rem); font-weight: 900; text-shadow: 0 6px 15px rgba(0,0,0,0.6); }
         .badge-pos { background: #28a745; }
         .badge-neg { background: #dc3545; }
         .weight-input { width: 80px; text-align: center; font-weight: bold; background:#fff; color:#333; }
@@ -121,29 +121,108 @@
             color: #212529;
         }
         
-        /* 修改的样式：分析時間範圍布局 */
+        /* 修改的样式：分析時間範圍布局 - 改為響應式設計 */
         .date-range-container {
             display: flex;
-            align-items: center;
-            flex-wrap: nowrap;
-            gap: 10px;
-            justify-content: flex-start;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
         }
+        
+        @media (min-width: 768px) {
+            .date-range-container {
+                flex-direction: row;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+        }
+        
+        .date-range-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
+        
+        @media (min-width: 768px) {
+            .date-range-section {
+                flex-direction: row;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+        }
+        
         .date-range-label {
             flex-shrink: 0;
-            margin-right: 5px;
+            margin-right: 10px;
+            white-space: nowrap;
+            font-weight: bold;
         }
+        
         .date-range-select {
-            flex-shrink: 0;
+            flex: 1 1 auto;
+            min-width: 150px;
         }
+        
+        @media (min-width: 576px) {
+            .date-range-select {
+                flex: 0 1 auto;
+            }
+        }
+        
         .date-range-custom {
-            flex-shrink: 0;
             display: flex;
-            align-items: center;
-            gap: 5px;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
         }
+        
+        @media (min-width: 768px) {
+            .date-range-custom {
+                flex-direction: row;
+                align-items: center;
+                gap: 10px;
+                flex: 1 1 auto;
+            }
+        }
+        
+        .date-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            width: 100%;
+        }
+        
+        @media (min-width: 768px) {
+            .date-input-group {
+                flex-direction: row;
+                align-items: center;
+                gap: 10px;
+            }
+        }
+        
+        .date-input-wrapper {
+            flex: 1 1 auto;
+            min-width: 120px;
+        }
+        
+        .analyze-btn-container {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        @media (min-width: 768px) {
+            .analyze-btn-container {
+                width: auto;
+                margin-top: 0;
+                justify-content: flex-start;
+            }
+        }
+        
         .analyze-btn-gold {
-            flex-shrink: 0;
             background-color: #ffc107 !important;
             border-color: #ffc107 !important;
             color: #212529 !important;
@@ -151,7 +230,15 @@
             padding-left: 20px;
             padding-right: 20px;
             min-width: 120px;
+            width: 100%;
         }
+        
+        @media (min-width: 768px) {
+            .analyze-btn-gold {
+                width: auto;
+            }
+        }
+        
         .analyze-btn-gold:hover {
             background-color: #e0a800 !important;
             border-color: #e0a800 !important;
@@ -160,6 +247,60 @@
         /* AI 分析助手標題背景改為深綠色 */
         .ai-analysis-header {
             background-color: #198754 !important; /* 深綠色 */
+        }
+        
+        /* 響應式表格調整 */
+        @media (max-width: 768px) {
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .table td, .table th {
+                white-space: nowrap;
+            }
+            
+            .card-body {
+                padding: 15px;
+            }
+            
+            .btn-group.w-100 {
+                flex-wrap: wrap;
+            }
+            
+            .btn-group.w-100 .btn {
+                flex: 1 0 auto;
+                min-width: 120px;
+                margin-bottom: 5px;
+            }
+        }
+        
+        /* 移動端調整 */
+        @media (max-width: 576px) {
+            .container {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+            
+            .card {
+                margin-bottom: 15px;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .form-control, .form-select {
+                font-size: 14px;
+            }
+            
+            .date-range-custom {
+                flex-direction: column;
+            }
+            
+            .date-input-group {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -297,25 +438,39 @@
                 <div class="card-body">
                     <form id="analyzeForm">
                         <div class="date-range-container">
-                            <div class="date-range-label">
-                                <label class="form-label text-white-50 mb-0"><strong>分析時間範圍：</strong></label>
+                            <div class="date-range-section">
+                                <div class="date-range-label">
+                                    <label class="form-label text-white-50 mb-0"><strong>分析時間範圍：</strong></label>
+                                </div>
+                                
+                                <div class="date-range-select">
+                                    <select id="dateRange" class="form-select">
+                                        <option value="30">最近30天</option>
+                                        <option value="60" selected>最近60天</option>
+                                        <option value="90">最近90天</option>
+                                        <option value="180">最近半年</option>
+                                        <option value="365">最近一年</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="date-range-custom">
+                                    <span class="text-white-50 d-none d-md-inline">或自訂：</span>
+                                    <span class="text-white-50 d-inline d-md-none">自訂：</span>
+                                    <div class="date-input-group">
+                                        <div class="date-input-wrapper">
+                                            <input type="date" id="startDate" class="form-control" placeholder="開始日期">
+                                        </div>
+                                        <span class="text-white-50 align-self-center">到</span>
+                                        <div class="date-input-wrapper">
+                                            <input type="date" id="endDate" class="form-control" placeholder="結束日期">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="date-range-select">
-                                <select id="dateRange" class="form-select">
-                                    <option value="30">最近30天</option>
-                                    <option value="60" selected>最近60天</option>
-                                    <option value="90">最近90天</option>
-                                    <option value="180">最近半年</option>
-                                    <option value="365">最近一年</option>
-                                </select>
+                            
+                            <div class="analyze-btn-container">
+                                <button class="btn analyze-btn-gold fw-bold" type="submit">立即分析</button>
                             </div>
-                            <div class="date-range-custom">
-                                <span class="text-white-50">或自訂：</span>
-                                <input type="date" id="startDate" class="form-control" placeholder="開始日期">
-                                <span class="text-white-50">到</span>
-                                <input type="date" id="endDate" class="form-control" placeholder="結束日期">
-                            </div>
-                            <button class="btn analyze-btn-gold fw-bold" type="submit">立即分析</button>
                         </div>
                     </form>
                     
@@ -334,7 +489,8 @@
             <div class="card text-dark">
                 <div class="card-header ai-analysis-header text-white ai-analysis-toggle" data-bs-toggle="collapse" data-bs-target="#aiAnalysisContent">
                     <strong>🔍 AI 雙重分析助手</strong>
-                    <small class="float-end">點擊展開/收合 | 同時分析消息面與風險面</small>
+                    <small class="float-end d-none d-md-inline">點擊展開/收合 | 同時分析消息面與風險面</small>
+                    <small class="float-end d-inline d-md-none">點擊展開/收合</small>
                 </div>
                 <div class="card-body collapse" id="aiAnalysisContent">
                     <div class="row g-3 align-items-center">
