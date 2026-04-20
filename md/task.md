@@ -1,0 +1,6 @@
+- [ ] 備份 `index.html`
+- [ ] 修改 `index.html` 中的 `endTs` 計算邏輯 (第 4550 行)
+- [ ] 修改 `index.html` 中的 `dataSource` 標籤錯誤 (第 4498 行)
+- [ ] 初始化 Git 倉庫並設定遠端
+- [ ] 提交並推送到 GitHub (https://github.com/Joseph-pai/tw-TPEx-Analysis)
+- [ ] 驗證結果並詢問是否保留 .md 文件
