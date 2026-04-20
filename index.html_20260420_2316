@@ -4495,7 +4495,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 } else {
-                    dataSource = 'Yahoo Finance';
+                    dataSource = 'TWSE';
                 }
             } else {
                 // 上櫃/興櫃公司：使用.TWO後綴或TPEx API
@@ -4547,7 +4547,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const allTimestamps = priceDataFinal.chart.result[0].timestamp;
             const allCloses = priceDataFinal.chart.result[0].indicators.quote[0].close;
             const startTs = new Date(startDate).getTime() / 1000;
-            const endTs = (new Date(endDate).getTime() + 86400000) / 1000; // 確保包含結束當日 23:59:59 的數據
+            const endTs = new Date(endDate).getTime() / 1000;
             
             const filteredData = allTimestamps.map((ts, i) => ({ ts, close: allCloses[i] })).filter(d => d.ts >= startTs && d.ts <= endTs && d.close);
             const closes = filteredData.map(d => d.close);
